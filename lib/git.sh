@@ -165,6 +165,9 @@ sync_exclude() {
         echo "$line"
       done < "$SPEC_FILE"
     fi
+    echo ""
+    echo "**/dot-git/"
+    echo ""
   } > "$tmp"
 
   if [[ -f "$EXCLUDE_FILE" ]] && cmp -s "$tmp" "$EXCLUDE_FILE"; then

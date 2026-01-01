@@ -59,6 +59,12 @@ cat > app.json <<'EOF'
 { "expo": { "name":"my-template", "slug":"my-template", "plugins":["expo-router"] } }
 EOF
 
+cat > .gitignore <<'EOF'
+.idea/
+.claude/
+.vscode/
+EOF
+
 git add .
 git commit -m "Minimal Expo Router sample with multiple routes"
 ```

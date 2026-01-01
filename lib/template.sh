@@ -172,7 +172,10 @@ fi
 ###############################################################################
 
 log "initializing template git repo for .$LAYER_NAME"
+mv "$ROOT/.git" "$ROOT/not-git"
 git init --separate-git-dir="$DOTGIT" "$ROOT"
+rm "$ROOT/.git"
+mv "$ROOT/not-git" "$ROOT/.git"
 
 ###############################################################################
 # COMPILE WHITELIST AND CREATE INITIAL COMMIT
@@ -180,31 +183,20 @@ git init --separate-git-dir="$DOTGIT" "$ROOT"
 
 # We run the NEW layer's git.sh, not the base layer's.
 # This ensures:
-# - .geetinclude is compiled into .gitnore
+# - .geetinclude is compiled into .gitignore
 # - commands are scoped correctly to the new layer
 #
 # First, compile excludes by calling status (idempotent).
 "$NEW_GIT_SH" status >/dev/null
 
-# Stage files according to the whitelist.
-# At this point, the whitelist is probably empty, so this may stage nothing.
-#
-# That is OK — we handle it explicitly.
+# TODO: right here, complet/autogen the .gitignore and do a git add of it
+
+# Stage only the initial folder
 set +e
-"$NEW_GIT_SH" add -A
+"$NEW_GIT_SH" add ".$LAYER_NAME" ":!.$LAYER_NAME/dot-git/"
 ADD_RC=$?
 set -e
-
-# Check if anything was staged (use the new layer's git wrapper)
-if GIT_DIR="$DOTGIT" GIT_WORK_TREE="$ROOT" git diff --cached --quiet 2>/dev/null; then
-  log "no files staged for .$LAYER_NAME yet"
-  log "edit $NEW_geetinclude to define the template contents"
-  log "then run:"
-  log "  cd $NEW_LAYER_DIR && $LAYER_NAME add -A"
-  log "  cd $NEW_LAYER_DIR && $LAYER_NAME commit -m \"Initial $LAYER_NAME template\""
-else
-  "$NEW_GIT_SH" commit -m "Initial $LAYER_NAME template" 2>/dev/null || true
-fi
+"$NEW_GIT_SH" commit -m "Initial $LAYER_NAME template" 2>/dev/null || true
 
 ###############################################################################
 # FINAL OUTPUT

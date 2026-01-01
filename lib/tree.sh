@@ -76,27 +76,21 @@ is_tracked() {
 print_tree_from_paths() {
   # Expect newline-separated relative paths on stdin.
   # Prints a simple ascii tree (directories/files) without requiring `tree`.
-  awk '
+  # Sort first, then process with awk (portable - no asorti needed)
+  sort | awk '
     BEGIN { FS="/"; }
     {
-      paths[NR] = $0
-    }
-    END {
-      n = asorti(paths, idx)
-      for (i = 1; i <= n; i++) {
-        path = paths[idx[i]]
-        split(path, parts, "/")
-        prefix = ""
-        for (j = 1; j <= length(parts); j++) {
-          node = prefix parts[j]
-          if (!(node in seen)) {
-            indent = ""
-            for (k = 1; k < j; k++) indent = indent "  "
-            print indent parts[j]
-            seen[node] = 1
-          }
-          prefix = node "/"
+      split($0, parts, "/")
+      prefix = ""
+      for (j = 1; j <= length(parts); j++) {
+        node = prefix parts[j]
+        if (!(node in seen)) {
+          indent = ""
+          for (k = 1; k < j; k++) indent = indent "  "
+          print indent parts[j]
+          seen[node] = 1
         }
+        prefix = node "/"
       }
     }
   '
@@ -110,9 +104,9 @@ usage() {
 [$LAYER_NAME tree] Show which files are included in this layer template
 
 Usage:
-  $LAYER_NAME tree list [tracked|all]
-  $LAYER_NAME tree tree [tracked|all]
-  $LAYER_NAME tree contains <path>
+  $LAYER_NAME tree [tracked|all]          # Show tree view (default)
+  $LAYER_NAME tree list [tracked|all]     # List files
+  $LAYER_NAME tree contains <path>        # Check if path is included
 
 Modes:
   tracked  - only files currently tracked by the layer template repo (fast)
@@ -125,7 +119,26 @@ Notes:
 EOF
 }
 
-cmd="${1:-help}"; shift || true
+# Parse first argument - could be subcommand or mode
+first_arg="${1:-}"
+
+# Check if it's a known subcommand
+case "$first_arg" in
+  list|contains|help|-h|--help)
+    cmd="$first_arg"
+    shift
+    ;;
+  tracked|all|"")
+    # It's a mode or empty, default to tree command
+    cmd="tree"
+    # Don't shift - let the tree command handle the mode
+    ;;
+  *)
+    # Unknown - could be a path for contains, or error
+    # Default to tree and let it handle
+    cmd="tree"
+    ;;
+esac
 
 case "$cmd" in
   help|-h|--help)
