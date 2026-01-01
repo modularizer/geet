@@ -38,18 +38,18 @@ log() { echo "[$LAYER_NAME split] $*" >&2; }
 
 need() {
   [[ -f "$GIT_SH" ]] || die "missing $GIT_SH"
-  [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]] || die "layer not initialized (run: $SCRIPT_DIR/init.sh)"
-  [[ -f "$EXCLUDE_FILE" ]] || die "missing compiled exclude ($EXCLUDE_FILE). Run: $GIT_SH status"
+  [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]] || die "layer not initialized (run: $LAYER_NAME init)"
+  [[ -f "$EXCLUDE_FILE" ]] || die "missing compiled exclude. Run: $LAYER_NAME status"
 }
 
 usage() {
   cat <<EOF
 Usage:
-  $SCRIPT_DIR/split.sh <dest_dir> [tracked|all]
+  $LAYER_NAME split <dest_dir> [tracked|all]
 
 Examples:
-  $SCRIPT_DIR/split.sh /tmp/${LAYER_NAME}-export
-  $SCRIPT_DIR/split.sh ../exports/${LAYER_NAME} all
+  $LAYER_NAME split /tmp/${LAYER_NAME}-export
+  $LAYER_NAME split ../exports/${LAYER_NAME} all
 
 Mode:
   tracked  Export only files tracked by this template repo (default)

@@ -195,6 +195,28 @@ if [[ -f "$GIT_SH" ]]; then
   "$GIT_SH" status >/dev/null || true
 fi
 
+###############################################################################
+# ENSURE APP .gitignore IGNORES dot-git/
+###############################################################################
+
+# Critical safety: dot-git/ contains git internals and must NEVER be committed
+# to the app repo. Ensure it's in .gitignore.
+APP_GITIGNORE="$ROOT/.gitignore"
+DOTGIT_PATTERN="**/dot-git/"
+
+if [[ -f "$APP_GITIGNORE" ]]; then
+  # Check if any form of dot-git ignore already exists
+  if ! grep -Eq '(^|[[:space:]])((\*\*/)?dot-git/|\.geet/dot-git/)([[:space:]]|$)' "$APP_GITIGNORE"; then
+    log "adding $DOTGIT_PATTERN to app .gitignore"
+    echo "$DOTGIT_PATTERN" >> "$APP_GITIGNORE"
+  else
+    log "app .gitignore already ignores dot-git/"
+  fi
+else
+  log "creating app .gitignore with $DOTGIT_PATTERN"
+  echo "$DOTGIT_PATTERN" > "$APP_GITIGNORE"
+fi
+
 
 if [[ "${GEET_RUN_POST_INIT:-1}" == "1" ]]; then
   ###############################################################################
@@ -258,5 +280,5 @@ log "  app gitdir:   $APP_GIT"
 log
 log "next steps:"
 log "  - develop normally with: git ..."
-log "  - update this layer with: $SCRIPT_DIR/git.sh pull"
-log "  - see included files with: $SCRIPT_DIR/tree.sh tree  (if present)"
+log "  - update this layer with: $LAYER_NAME pull"
+log "  - see included files with: $LAYER_NAME tree tree"

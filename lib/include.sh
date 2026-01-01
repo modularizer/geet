@@ -54,7 +54,7 @@ need_files() {
 usage() {
   cat <<EOF
 Usage:
-  $SCRIPT_DIR/include.sh <path> [...]
+  $LAYER_NAME include <path> [...]
 
 Description:
   Explicitly adds paths to the template whitelist (.geetinclude).
@@ -70,9 +70,9 @@ Notes:
   - Directories are normalized to '<dir>/**'.
 
 Examples:
-  $SCRIPT_DIR/include.sh app/foo.tsx
-  $SCRIPT_DIR/include.sh app/shared
-  $SCRIPT_DIR/include.sh package.json
+  $LAYER_NAME include app/foo.tsx
+  $LAYER_NAME include app/shared
+  $LAYER_NAME include package.json
 EOF
 }
 
@@ -141,4 +141,4 @@ fi
 
 log "done"
 log "review .geetinclude, then commit with:"
-log "  $SCRIPT_DIR/git.sh commit -m \"Include files in template\""
+log "  $LAYER_NAME commit -m \"Include files in template\""

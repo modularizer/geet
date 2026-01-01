@@ -31,7 +31,7 @@ help() {
 $LAYER_NAME — template layer tooling
 
 Usage:
-  $SCRIPT_DIR/cli.sh <command> [args...]
+  $LAYER_NAME <command> [args...]
 
 Git commands (forwarded automatically):
   status | diff | add | commit | pull | push | checkout | log | ...
@@ -47,10 +47,10 @@ Explicit commands:
   help       Show this help
 
 Examples:
-  $SCRIPT_DIR/cli.sh status
-  $SCRIPT_DIR/cli.sh add app/foo.tsx
-  $SCRIPT_DIR/cli.sh commit -m "Update template"
-  $SCRIPT_DIR/cli.sh pull
+  $LAYER_NAME status
+  $LAYER_NAME add app/foo.tsx
+  $LAYER_NAME commit -m "Update template"
+  $LAYER_NAME pull
 
 Notes:
 - App repo (normal):        $ROOT/.git

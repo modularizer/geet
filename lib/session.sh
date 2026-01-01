@@ -16,7 +16,7 @@ log(){ echo "[$LAYER_NAME session] $*" >&2; }
 usage() {
   cat <<EOF
 Usage:
-  $SCRIPT_DIR/session.sh run [options] -- <command...>
+  $LAYER_NAME session run [options] -- <command...>
 
 Options:
   --mode tracked|all      split mode (default: tracked)
@@ -26,10 +26,10 @@ Options:
                            (repeatable)
 
 Examples:
-  $SCRIPT_DIR/session.sh run -- npm run build
-  $SCRIPT_DIR/session.sh run --mode all -- npm test
-  $SCRIPT_DIR/session.sh run --copy-back dist:dist -- npm run build
-  $SCRIPT_DIR/session.sh run --keep -- npm run build
+  $LAYER_NAME session run -- npm run build
+  $LAYER_NAME session run --mode all -- npm test
+  $LAYER_NAME session run --copy-back dist:dist -- npm run build
+  $LAYER_NAME session run --keep -- npm run build
 EOF
 }
 

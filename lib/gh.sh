@@ -156,20 +156,20 @@ usage() {
 [$LAYER_NAME gh] GitHub CLI integration
 
 Usage:
-  $SCRIPT_DIR/gh.sh <command> [args...]
+  $LAYER_NAME gh <command> [args...]
 
 Commands:
   setup      Install and authenticate GitHub CLI (runs automatically if needed)
   publish    Create and push repo to GitHub (defaults: name=dirname, --source=., --push)
-  <any>      Pass through to gh CLI (e.g., 'gh pr list' -> 'geet gh pr list')
+  <any>      Pass through to gh CLI (e.g., 'gh pr list' -> '$LAYER_NAME gh pr list')
   help       Show this help
 
 Examples:
-  $SCRIPT_DIR/gh.sh publish                    # Auto-setup if needed, then publish
-  $SCRIPT_DIR/gh.sh publish --public
-  $SCRIPT_DIR/gh.sh publish --private --description "My cool project"
-  $SCRIPT_DIR/gh.sh pr list                    # Auto-setup if needed, then list PRs
-  $SCRIPT_DIR/gh.sh repo view
+  $LAYER_NAME gh publish                    # Auto-setup if needed, then publish
+  $LAYER_NAME gh publish --public
+  $LAYER_NAME gh publish --private --description "My cool project"
+  $LAYER_NAME gh pr list                    # Auto-setup if needed, then list PRs
+  $LAYER_NAME gh repo view
 
 Note:
   All commands automatically run 'setup' if gh is not installed or authenticated.

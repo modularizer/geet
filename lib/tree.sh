@@ -35,13 +35,13 @@ log() { echo "[$LAYER_NAME tree] $*" >&2; }
 ###############################################################################
 
 need_dotgit() {
-  [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]] || die "missing $DOTGIT (run: $SCRIPT_DIR/git.sh init)"
+  [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]] || die "missing $DOTGIT (run: $LAYER_NAME init)"
 }
 
 # We rely on compiled excludes existing to ensure the whitelist semantics are
 # actually in effect. The compiler lives in git.sh (single responsibility).
 need_compiled_exclude() {
-  [[ -f "$EXCLUDE_FILE" ]] || die "missing compiled exclude: $EXCLUDE_FILE (run: $SCRIPT_DIR/git.sh status)"
+  [[ -f "$EXCLUDE_FILE" ]] || die "missing compiled exclude: $EXCLUDE_FILE (run: $LAYER_NAME status)"
 }
 
 # Run git in the layer view (read-only usage only)
@@ -110,9 +110,9 @@ usage() {
 [$LAYER_NAME tree] Show which files are included in this layer template
 
 Usage:
-  $SCRIPT_DIR/tree.sh list [tracked|all]
-  $SCRIPT_DIR/tree.sh tree [tracked|all]
-  $SCRIPT_DIR/tree.sh contains <path>
+  $LAYER_NAME tree list [tracked|all]
+  $LAYER_NAME tree tree [tracked|all]
+  $LAYER_NAME tree contains <path>
 
 Modes:
   tracked  - only files currently tracked by the layer template repo (fast)
@@ -121,7 +121,7 @@ Modes:
 Notes:
 - Requires layer gitdir: $DOTGIT
 - Requires compiled exclude: $EXCLUDE_FILE
-  If missing, run: $SCRIPT_DIR/git.sh status
+  If missing, run: $LAYER_NAME status
 EOF
 }
 
@@ -164,7 +164,7 @@ case "$cmd" in
             done
         ;;
       *)
-        die "usage: $SCRIPT_DIR/tree.sh list [tracked|all]"
+        die "usage: $LAYER_NAME tree list [tracked|all]"
         ;;
     esac
     ;;
@@ -182,7 +182,7 @@ case "$cmd" in
         "$SCRIPT_DIR/tree.sh" list all | print_tree_from_paths
         ;;
       *)
-        die "usage: $SCRIPT_DIR/tree.sh tree [tracked|all]"
+        die "usage: $LAYER_NAME tree tree [tracked|all]"
         ;;
     esac
     ;;
@@ -191,7 +191,7 @@ case "$cmd" in
     need_dotgit
     need_compiled_exclude
     p="${1:-}"
-    [[ -n "$p" ]] || die "usage: $SCRIPT_DIR/tree.sh contains <path>"
+    [[ -n "$p" ]] || die "usage: $LAYER_NAME tree contains <path>"
 
     # If user provides an absolute path inside the repo, convert to relative
     if [[ "$p" == "$ROOT/"* ]]; then
@@ -228,7 +228,7 @@ case "$cmd" in
     if [[ "$included" == "YES" && "$tracked" == "NO" ]]; then
       echo
       echo "hint: included but not tracked. Add it with:"
-      echo "  $SCRIPT_DIR/git.sh add -- \"$p\""
+      echo "  $LAYER_NAME add -- \"$p\""
     fi
 
     if [[ "$included" == "NO" ]]; then
@@ -236,11 +236,11 @@ case "$cmd" in
       echo "hint: to include it, add a line to:"
       echo "  $geetinclude_SPEC"
       echo "then regenerate excludes by running:"
-      echo "  $SCRIPT_DIR/git.sh status"
+      echo "  $LAYER_NAME status"
     fi
     ;;
 
   *)
-    die "unknown command '$cmd' (try: $SCRIPT_DIR/tree.sh help)"
+    die "unknown command '$cmd' (try: $LAYER_NAME tree help)"
     ;;
 esac

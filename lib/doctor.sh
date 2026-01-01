@@ -98,9 +98,9 @@ else
 fi
 
 if [[ -f "$SCRIPT_DIR/init.sh" ]]; then
-  ok "layer init script present: $SCRIPT_DIR/init.sh"
+  ok "layer init script present"
 else
-  fail "missing layer init script: $SCRIPT_DIR/init.sh"
+  fail "missing layer init script"
 fi
 
 # Check for post-init hook
@@ -114,10 +114,19 @@ if [[ -f "$POST_INIT_SH" ]]; then
   fi
 fi
 
-if [[ -f "$geetinclude" ]]; then
-  ok "whitelist spec present: $geetinclude"
+# Check for include/exclude spec
+geetexclude="$LAYER_DIR/.geetexclude"
+
+if [[ -f "$geetinclude" && -f "$geetexclude" ]]; then
+  fail "CONFLICT: Both .geetinclude and .geetexclude exist (use only one)"
+  info "remove one of: $geetinclude OR $geetexclude"
+elif [[ -f "$geetinclude" ]]; then
+  ok "include spec present (whitelist mode): $geetinclude"
+elif [[ -f "$geetexclude" ]]; then
+  ok "exclude spec present (blacklist mode): $geetexclude"
 else
-  warn "whitelist spec missing: $geetinclude (template view may include nothing or behave unexpectedly)"
+  warn "no include/exclude spec found (.geetinclude or .geetexclude)"
+  info "template view may include nothing or behave unexpectedly"
 fi
 
 echo
@@ -130,7 +139,7 @@ if [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]]; then
   ok "layer initialized (dot-git exists)"
 else
   warn "layer NOT initialized (missing $DOTGIT/HEAD)"
-  info "run: $SCRIPT_DIR/init.sh"
+  info "run: $LAYER_NAME init"
 fi
 
 # If dot-git exists, make sure compiled exclude exists (after git.sh runs at least once)
@@ -139,7 +148,7 @@ if [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]]; then
     ok "compiled exclude present: $EXCLUDE_FILE"
   else
     warn "compiled exclude missing: $EXCLUDE_FILE"
-    info "run: $GIT_SH status   (this should compile .geetinclude -> info/exclude)"
+    info "run: $LAYER_NAME status   (this compiles include/exclude rules)"
   fi
 fi
 
