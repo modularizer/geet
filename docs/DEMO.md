@@ -452,7 +452,7 @@ geet doctor
 [geet doctor] ✅ compiled exclude present
 
 [geet doctor] ✅ dot-git is not tracked by app repo
-[geet doctor] ✅ app .gitignore appears to ignore dot-git/
+[geet doctor] ✅ app .geetexclude appears to ignore dot-git/
 
 [geet doctor] ✅ layer git wrapper can run git commands
 [geet doctor] ✅ layer HEAD resolves
@@ -571,7 +571,7 @@ geet tree tree
 **Accidentally committed dot-git/:**
 ```bash
 git rm -r --cached .geet/dot-git
-echo "**/dot-git/" >> .gitignore
+echo "**/dot-git/" >> .geetexclude
 git commit -m "Remove dot-git from tracking"
 ```
 

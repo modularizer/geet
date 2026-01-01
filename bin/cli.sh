@@ -13,6 +13,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LAYER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 ROOT="$(cd "$LAYER_DIR/.." && pwd)"
+LIB="$(cd "$LAYER_DIR/lib" && pwd)}"
 
 LAYER_NAME="$(basename "$LAYER_DIR")"
 LAYER_NAME="${LAYER_NAME#.}"

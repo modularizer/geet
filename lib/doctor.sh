@@ -29,7 +29,7 @@ DOTGIT="$LAYER_DIR/dot-git"
 GIT_SH="$SCRIPT_DIR/git.sh"
 TREE_SH="$SCRIPT_DIR/tree.sh"
 geetinclude="$LAYER_DIR/.geetinclude"
-EXCLUDE_FILE="$LAYER_DIR/.gitignore"
+EXCLUDE_FILE="$LAYER_DIR/.geetexclude"
 
 # Pretty printing helpers
 ok()   { echo "[$LAYER_NAME doctor] ✅ $*"; }
@@ -155,21 +155,21 @@ if [[ -d "$DOTGIT" ]]; then
     fail "SECURITY: app repo is tracking $rel_dotgit (must be ignored; remove from git history)"
     info "fix (careful):"
     info "  git rm -r --cached -- \"$rel_dotgit\""
-    info "  add to app .gitignore: **/dot-git/"
+    info "  add to app .geetexclude: **/dot-git/"
   else
     ok "dot-git is not tracked by app repo"
   fi
 
   # Also check that app ignore rules contain something like dot-git
   # This is a heuristic (gitignore can be split across files), so it's a warning not failure.
-  if [[ -f "$ROOT/.gitignore" ]]; then
-    if grep -Eq '(^|\s)(\*\*/dot-git/|\.geet/dot-git/|dot-git/)\s*$' "$ROOT/.gitignore"; then
-      ok "app .gitignore appears to ignore dot-git/"
+  if [[ -f "$ROOT/.geetexclude" ]]; then
+    if grep -Eq '(^|\s)(\*\*/dot-git/|\.geet/dot-git/|dot-git/)\s*$' "$ROOT/.geetexclude"; then
+      ok "app .geetexclude appears to ignore dot-git/"
     else
-      warn "app .gitignore does not obviously ignore dot-git/ (recommended: **/dot-git/)"
+      warn "app .geetexclude does not obviously ignore dot-git/ (recommended: **/dot-git/)"
     fi
   else
-    warn "app .gitignore missing (recommended: ignore **/dot-git/)"
+    warn "app .geetexclude missing (recommended: ignore **/dot-git/)"
   fi
 fi
 

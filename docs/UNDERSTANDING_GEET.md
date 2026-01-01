@@ -30,7 +30,7 @@ MyApp/
 
   .geet/                   # base template layer
     dot-git/               # template git database (ignored by app repo)
-    .geetinclude           # whitelist (OR use .gitignore for blacklist)
+    .geetinclude           # whitelist (OR use .geetexclude for blacklist)
     lib/
       cli.sh               # single entrypoint
       git.sh               # git wrapper (template view)

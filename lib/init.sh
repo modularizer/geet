@@ -177,33 +177,33 @@ git -C "$ROOT" init >/dev/null
 # The whitelist compilation lives in git.sh (single responsibility).
 #
 # We trigger it by calling "status" in the layer view, which should:
-# - compile .geetinclude -> .gitignore
+# - compile .geetinclude -> .geetexclude
 # - show template status (optional)
 if [[ -f "$GIT_SH" ]]; then
-  log "syncing whitelist rules (.geetinclude -> .gitignore)"
+  log "syncing whitelist rules (.geetinclude -> .geetexclude)"
   # We do not care about the status output, only that it runs without error.
   "$GIT_SH" status >/dev/null || true
 fi
 
 ###############################################################################
-# ENSURE APP .gitignore IGNORES dot-git/
+# ENSURE APP .geetexclude IGNORES dot-git/
 ###############################################################################
 
 # Critical safety: dot-git/ contains git internals and must NEVER be committed
-# to the app repo. Ensure it's in .gitignore.
-APP_GITIGNORE="$ROOT/.gitignore"
+# to the app repo. Ensure it's in .geetexclude.
+APP_GITIGNORE="$ROOT/.geetexclude"
 DOTGIT_PATTERN="**/dot-git/"
 
 if [[ -f "$APP_GITIGNORE" ]]; then
   # Check if any form of dot-git ignore already exists
   if ! grep -Eq '(^|[[:space:]])((\*\*/)?dot-git/|\.geet/dot-git/)([[:space:]]|$)' "$APP_GITIGNORE"; then
-    log "adding $DOTGIT_PATTERN to app .gitignore"
+    log "adding $DOTGIT_PATTERN to app .geetexclude"
     echo "$DOTGIT_PATTERN" >> "$APP_GITIGNORE"
   else
-    log "app .gitignore already ignores dot-git/"
+    log "app .geetexclude already ignores dot-git/"
   fi
 else
-  log "creating app .gitignore with $DOTGIT_PATTERN"
+  log "creating app .geetexclude with $DOTGIT_PATTERN"
   echo "$DOTGIT_PATTERN" > "$APP_GITIGNORE"
 fi
 
