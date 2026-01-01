@@ -29,7 +29,7 @@ DOTGIT="$LAYER_DIR/dot-git"
 GIT_SH="$SCRIPT_DIR/git.sh"
 TREE_SH="$SCRIPT_DIR/tree.sh"
 geetinclude="$LAYER_DIR/.geetinclude"
-EXCLUDE_FILE="$DOTGIT/info/exclude"
+EXCLUDE_FILE="$LAYER_DIR/.gitignore"
 
 # Pretty printing helpers
 ok()   { echo "[$LAYER_NAME doctor] ✅ $*"; }
@@ -114,20 +114,6 @@ if [[ -f "$POST_INIT_SH" ]]; then
   fi
 fi
 
-# Check for include/exclude spec
-geetexclude="$LAYER_DIR/.geetexclude"
-
-if [[ -f "$geetinclude" && -f "$geetexclude" ]]; then
-  fail "CONFLICT: Both .geetinclude and .geetexclude exist (use only one)"
-  info "remove one of: $geetinclude OR $geetexclude"
-elif [[ -f "$geetinclude" ]]; then
-  ok "include spec present (whitelist mode): $geetinclude"
-elif [[ -f "$geetexclude" ]]; then
-  ok "exclude spec present (blacklist mode): $geetexclude"
-else
-  warn "no include/exclude spec found (.geetinclude or .geetexclude)"
-  info "template view may include nothing or behave unexpectedly"
-fi
 
 echo
 

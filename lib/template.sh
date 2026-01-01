@@ -2,6 +2,12 @@
 set -euo pipefail
 
 ###############################################################################
+# HELPERS
+###############################################################################
+die() { echo "[template] $*" >&2; exit 1; }
+log() { echo "[template] $*" >&2; }
+
+###############################################################################
 # template.sh — promote the CURRENT APP into a NEW TEMPLATE LAYER
 #
 # This script creates a NEW hidden layer folder (e.g. .MyApp2 or .sk2)
@@ -43,17 +49,41 @@ set -euo pipefail
 # PATH DISCOVERY
 ###############################################################################
 
-# Directory this script lives in (the "current" layer, usually .geet)
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # .geet/lib
-BASE_LAYER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"  # .geet
-ROOT="$(cd "$BASE_LAYER_DIR/.." && pwd)"  # MyApp/
+# Directory this script lives in
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Name of the base layer (for logging only)
-BASE_LAYER_NAME="$(basename "$BASE_LAYER_DIR")"
-BASE_LAYER_NAME="${BASE_LAYER_NAME#.}"
+# Determine if we're running from a layer or from global installation
+# If SCRIPT_DIR is like /usr/lib/node_modules/geet/lib, we're global
+# If SCRIPT_DIR is like /path/to/MyApp/.geet/lib, we're in a layer
+
+log "DEBUG: SCRIPT_DIR=$SCRIPT_DIR"
+
+if [[ "$SCRIPT_DIR" == */geet/lib ]]; then
+  log "DEBUG: Detected global installation"
+  # Global installation - use git to find repo root, or current directory
+  if ROOT_TMP="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+    ROOT="$ROOT_TMP"
+    log "DEBUG: Found git repo root: $ROOT"
+  else
+    # No git repo, use current directory (will initialize one later)
+    ROOT="$(pwd)"
+    log "DEBUG: No git repo, using pwd: $ROOT"
+  fi
+  BASE_LAYER_DIR="$SCRIPT_DIR/.."  # Use global geet as source
+  BASE_LAYER_NAME="geet"
+else
+  log "DEBUG: Detected local layer installation"
+  # Local layer installation
+  BASE_LAYER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"  # .geet
+  ROOT="$(cd "$BASE_LAYER_DIR/.." && pwd)"  # MyApp/
+  BASE_LAYER_NAME="$(basename "$BASE_LAYER_DIR")"
+  BASE_LAYER_NAME="${BASE_LAYER_NAME#.}"
+  log "DEBUG: ROOT from layer: $ROOT"
+fi
 
 # App name = directory name of the project root
 APP_NAME="$(basename "$ROOT")"
+log "DEBUG: APP_NAME=$APP_NAME, ROOT=$ROOT"
 
 ###############################################################################
 # ARGUMENT PARSING
@@ -82,19 +112,17 @@ DOTGIT="$NEW_LAYER_DIR/dot-git"
 NEW_GIT_SH="$NEW_LAYER_DIR/lib/git.sh"
 NEW_geetinclude="$NEW_LAYER_DIR/.geetinclude"
 
-###############################################################################
-# HELPERS
-###############################################################################
-die() { echo "[template] $*" >&2; exit 1; }
-log() { echo "[template] $*" >&2; }
+
 
 ###############################################################################
 # SAFETY CHECKS
 ###############################################################################
 
-# Must be run from inside an app repo
+# Check if we have a git repo in current directory
 if [[ ! -d "$ROOT/.git" ]]; then
-  die "no app repo found at $ROOT/.git (run from inside an app repo)"
+  log "no git repo found at $ROOT/.git"
+  log "initializing new git repo..."
+  git -C "$ROOT" init >/dev/null
 fi
 
 # Do not overwrite an existing layer
@@ -104,7 +132,7 @@ fi
 
 # We expect git.sh and init.sh to exist in the base layer
 if [[ ! -f "$BASE_LAYER_DIR/lib/git.sh" || ! -f "$BASE_LAYER_DIR/lib/init.sh" ]]; then
-  die "base layer missing lib/git.sh or lib/init.sh (cannot promote)"
+  die "source files missing (expected at $BASE_LAYER_DIR/lib/)"
 fi
 
 ###############################################################################
@@ -119,21 +147,32 @@ mkdir -p "$NEW_LAYER_DIR"
 # This keeps all layers structurally identical and self-contained.
 mkdir -p "$NEW_LAYER_DIR/lib"
 mkdir -p "$NEW_LAYER_DIR/bin"
-cp "$BASE_LAYER_DIR/lib/*.sh" "$NEW_LAYER_DIR/lib/"
-cp "$BASE_LAYER_DIR/bin/*.sh" "$NEW_LAYER_DIR/bin/"
-cp "$BASE_LAYER_DIR/README.md" "$NEW_LAYER_DIR/README.md"
-cp "$BASE_LAYER_DIR/package.json" "$NEW_LAYER_DIR/package.json"
-cp "$BASE_LAYER_DIR/geetinclude.sample" "$NEW_LAYER_DIR/geetinclude.sample"
-cp "$BASE_LAYER_DIR/geetinclude.sample" "$NEW_LAYER_DIR/.geetinclude"
+
+cp "$BASE_LAYER_DIR/README.md" "$NEW_LAYER_DIR/README.md" 2>/dev/null
+cp "$BASE_LAYER_DIR/.geethier" "$NEW_LAYER_DIR/.geethier" 2>/dev/null
+echo "$LAYER_NAME\n" >> "$NEW_LAYER_DIR/.geethier"
+
+# Copy all shell scripts from lib/
+cp "$BASE_LAYER_DIR/lib"/*.sh "$NEW_LAYER_DIR/lib/" 2>/dev/null
+
+# Copy bin files if they exist
+if [[ -d "$BASE_LAYER_DIR/bin" ]]; then
+  cp "$BASE_LAYER_DIR/bin"/*.sh "$NEW_LAYER_DIR/bin/" 2>/dev/null
+fi
+
+# Copy sample files
+if [[ -f "$BASE_LAYER_DIR/geetinclude.sample" ]]; then
+  cp "$BASE_LAYER_DIR/geetinclude.sample" "$NEW_LAYER_DIR/geetinclude.sample"
+  cp "$BASE_LAYER_DIR/geetinclude.sample" "$NEW_LAYER_DIR/.geetinclude"
+fi
+
 
 ###############################################################################
 # INITIALIZE TEMPLATE GIT REPO FOR THE NEW LAYER
 ###############################################################################
 
 log "initializing template git repo for .$LAYER_NAME"
-
-mkdir -p "$DOTGIT"
-git init "$DOTGIT" >/dev/null
+git init --separate-git-dir="$DOTGIT" "$ROOT"
 
 ###############################################################################
 # COMPILE WHITELIST AND CREATE INITIAL COMMIT
@@ -141,11 +180,11 @@ git init "$DOTGIT" >/dev/null
 
 # We run the NEW layer's git.sh, not the base layer's.
 # This ensures:
-# - .geetinclude is compiled into dot-git/info/exclude
+# - .geetinclude is compiled into .gitnore
 # - commands are scoped correctly to the new layer
 #
 # First, compile excludes by calling status (idempotent).
-"$NEW_GIT_SH" status >/dev/null || true
+"$NEW_GIT_SH" status >/dev/null
 
 # Stage files according to the whitelist.
 # At this point, the whitelist is probably empty, so this may stage nothing.
@@ -156,15 +195,15 @@ set +e
 ADD_RC=$?
 set -e
 
-# Check if anything was staged
-if git -C "$ROOT" --git-dir="$DOTGIT" diff --cached --quiet; then
+# Check if anything was staged (use the new layer's git wrapper)
+if GIT_DIR="$DOTGIT" GIT_WORK_TREE="$ROOT" git diff --cached --quiet 2>/dev/null; then
   log "no files staged for .$LAYER_NAME yet"
   log "edit $NEW_geetinclude to define the template contents"
   log "then run:"
-  log "  $NEW_LAYER_DIR/lib/git.sh add -A"
-  log "  $NEW_LAYER_DIR/lib/git.sh commit -m \"Initial $LAYER_NAME template\""
+  log "  cd $NEW_LAYER_DIR && $LAYER_NAME add -A"
+  log "  cd $NEW_LAYER_DIR && $LAYER_NAME commit -m \"Initial $LAYER_NAME template\""
 else
-  "$NEW_GIT_SH" commit -m "Initial $LAYER_NAME template"
+  "$NEW_GIT_SH" commit -m "Initial $LAYER_NAME template" 2>/dev/null || true
 fi
 
 ###############################################################################
@@ -178,6 +217,7 @@ log "  location:   $NEW_LAYER_DIR"
 log
 log "next steps:"
 log "  1) edit: $NEW_geetinclude"
-log "  2) stage files: $NEW_LAYER_DIR/lib/git.sh add -A"
-log "  3) commit:      $NEW_LAYER_DIR/lib/git.sh commit -m \"Initial $LAYER_NAME template\""
-log "  4) publish:     push this repo to create a reusable template"
+log "  2) cd $NEW_LAYER_DIR"
+log "  3) stage files: $LAYER_NAME add -A"
+log "  4) commit:      $LAYER_NAME commit -m \"Initial $LAYER_NAME template\""
+log "  5) publish:     push this repo to create a reusable template"

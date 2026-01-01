@@ -35,7 +35,6 @@ geet/
     geet.sh         # npm executable wrapper
 
   geetinclude.sample   # Whitelist example
-  geetexclude.sample   # Blacklist example
   package.json         # npm package config
 ```
 

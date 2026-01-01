@@ -136,17 +136,7 @@ fi
 # Create layer directory if missing (should exist because this script is inside it)
 mkdir -p "$LAYER_DIR"
 
-# Create DOTGIT parent dir (LAYER_DIR exists, but be explicit)
-mkdir -p "$DOTGIT"
 
-# If DOTGIT exists but doesn't look like a git dir, that's suspicious.
-# We refuse to overwrite it.
-if [[ -e "$DOTGIT" && ! -f "$DOTGIT/HEAD" ]]; then
-  die "$DOTGIT exists but is not a git directory (missing HEAD). Refusing to proceed."
-fi
-
-log "capturing cloned template repo:"
-log "  moving $APP_GIT -> $DOTGIT"
 mv "$APP_GIT" "$DOTGIT"
 
 ###############################################################################
@@ -187,10 +177,10 @@ git -C "$ROOT" init >/dev/null
 # The whitelist compilation lives in git.sh (single responsibility).
 #
 # We trigger it by calling "status" in the layer view, which should:
-# - compile .geetinclude -> dot-git/info/exclude
+# - compile .geetinclude -> .gitignore
 # - show template status (optional)
 if [[ -f "$GIT_SH" ]]; then
-  log "syncing whitelist rules (.geetinclude -> dot-git/info/exclude)"
+  log "syncing whitelist rules (.geetinclude -> .gitignore)"
   # We do not care about the status output, only that it runs without error.
   "$GIT_SH" status >/dev/null || true
 fi

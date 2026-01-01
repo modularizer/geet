@@ -25,7 +25,7 @@ LAYER_NAME="${LAYER_NAME#.}"
 
 DOTGIT="$LAYER_DIR/dot-git"
 geetinclude_SPEC="$LAYER_DIR/.geetinclude"
-EXCLUDE_FILE="$DOTGIT/info/exclude"
+EXCLUDE_FILE="$LAYER_DIR/.gitignore"
 
 die() { echo "[$LAYER_NAME tree] $*" >&2; exit 1; }
 log() { echo "[$LAYER_NAME tree] $*" >&2; }
@@ -205,7 +205,7 @@ case "$cmd" in
 
     if is_included "$p"; then
       included="YES"
-      reason="not ignored by layer whitelist (.geetinclude -> info/exclude)"
+      reason="not ignored by layer whitelist (.geetinclude -> .gitignore)"
     else
       included="NO"
       # Show the ignore rule that matched (source:line:pattern path)

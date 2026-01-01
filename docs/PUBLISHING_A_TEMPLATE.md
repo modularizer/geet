@@ -6,7 +6,7 @@ Each template layer defines which files it tracks using **either** a whitelist o
 
 **Choose one (never both):**
 - `.geetinclude` — **Whitelist mode** (only listed files are tracked)
-- `.geetexclude` — **Blacklist mode** (all files except listed are tracked)
+- `.gitignore`
 
 ### Whitelist mode (`.geetinclude`)
 
@@ -29,7 +29,7 @@ package.json
 
 **Best for:** Component libraries, shared utilities, minimal templates
 
-### Blacklist mode (`.geetexclude`)
+### Blacklist mode (`.gitignore`)
 
 Use when most files should be in the template.
 
@@ -48,7 +48,7 @@ app/custom/**
 
 **Best for:** Full app templates where only a few paths are app-specific
 
-**Note:** Both files are compiled into Git's repo-local ignore system (`dot-git/info/exclude`) automatically.
+**Note:** Both files are compiled into Git's repo-local ignore system (`.gitignore`) automatically.
 
 ## Creating a post-init hook
 

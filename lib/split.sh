@@ -31,7 +31,7 @@ GIT_SH="$SCRIPT_DIR/git.sh"
 TREE_SH="$SCRIPT_DIR/tree.sh"
 
 DOTGIT="$LAYER_DIR/dot-git"
-EXCLUDE_FILE="$DOTGIT/info/exclude"
+EXCLUDE_FILE="$LAYER_DIR/.gitignore"
 
 die() { echo "[$LAYER_NAME split] $*" >&2; exit 1; }
 log() { echo "[$LAYER_NAME split] $*" >&2; }

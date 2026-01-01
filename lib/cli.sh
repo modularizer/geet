@@ -26,12 +26,20 @@ script() {
   echo "$path"
 }
 
+geetcmd="${geetcmd:-geet}"
+geetname="${geetname:-LAYER_NAME}"
+geetexplanation=""
+
+if [[ "$geetname" != "$LAYER_NAME" ]]; then
+  geetexplanation="($geetname)"
+fi
+cmd="${1:-help}"
 help() {
   cat <<EOF
-$LAYER_NAME — template layer tooling
+$geetcmd — template layer tooling for "$LAYER_NAME" $geetexplanation
 
 Usage:
-  $LAYER_NAME <command> [args...]
+  $geetcmd <command> [args...]
 
 Git commands (forwarded automatically):
   status | diff | add | commit | pull | push | checkout | log | ...
@@ -47,19 +55,22 @@ Explicit commands:
   help       Show this help
 
 Examples:
-  $LAYER_NAME status
-  $LAYER_NAME add app/foo.tsx
-  $LAYER_NAME commit -m "Update template"
-  $LAYER_NAME pull
+  $geetcmd status
+  $geetcmd add app/foo.tsx
+  $geetcmd commit -m "Update template"
+  $geetcmd pull
 
 Notes:
+- using geet command:       $geetcmd
+- full geet command:        $0
+- This script:              $CLI
+- Layer Name:               $LAYER_NAME
 - App repo (normal):        $ROOT/.git
 - This layer template repo: $LAYER_DIR/dot-git
 - Whitelist spec:           $LAYER_DIR/.geetinclude
 EOF
 }
 
-cmd="${1:-help}"
 shift || true
 
 case "$cmd" in

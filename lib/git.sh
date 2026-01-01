@@ -20,7 +20,7 @@ set -euo pipefail
 #   <layer>/.geetinclude
 #
 # We compile that whitelist into Git's repo-local ignore mechanism:
-#   <layer>/dot-git/info/exclude
+#   <layer>/.gitignore
 #
 # IMPORTANT:
 # - dot-git/ contains Git internals and MUST NOT be committed to the app repo.
@@ -61,28 +61,16 @@ DOTGIT="$LAYER_DIR/dot-git"
 # INCLUDE/EXCLUDE SPEC (AUTHOR-FACING)
 ###############################################################################
 
-# Templates can use EITHER .geetinclude (whitelist) OR .geetexclude (blacklist).
+# Templates can use EITHER .geetinclude (whitelist) OR .gitignore (blacklist).
 # NEVER both.
 #
 # .geetinclude = WHITELIST mode (only listed files are tracked)
-# .geetexclude = BLACKLIST mode (all files except listed are tracked)
 
 GEETINCLUDE_SPEC="$LAYER_DIR/.geetinclude"
-GEETEXCLUDE_SPEC="$LAYER_DIR/.geetexclude"
 
 # Determine which mode we're in
-SPEC_FILE=""
-SPEC_MODE=""
-
-if [[ -f "$GEETINCLUDE_SPEC" && -f "$GEETEXCLUDE_SPEC" ]]; then
-  die "ERROR: Both .geetinclude and .geetexclude exist. Use only one."
-elif [[ -f "$GEETINCLUDE_SPEC" ]]; then
-  SPEC_FILE="$GEETINCLUDE_SPEC"
-  SPEC_MODE="include"
-elif [[ -f "$GEETEXCLUDE_SPEC" ]]; then
-  SPEC_FILE="$GEETEXCLUDE_SPEC"
-  SPEC_MODE="exclude"
-fi
+SPEC_FILE="$GEETINCLUDE_SPEC"
+SPEC_MODE="include"
 
 # Backwards compatibility
 geetinclude_SPEC="$SPEC_FILE"
@@ -91,9 +79,9 @@ geetinclude_SPEC="$SPEC_FILE"
 # COMPILED EXCLUDES (EFFECTIVE)
 ###############################################################################
 
-# Git supports repo-local ignore rules via <gitdir>/info/exclude.
+# Git supports repo-local ignore rules via .gitignore.
 # This affects ONLY the template repo, not the app repo.
-EXCLUDE_FILE="$DOTGIT/info/exclude"
+EXCLUDE_FILE="$LAYER_DIR/.gitignore"
 
 ###############################################################################
 # OTHER LAYER TOOLS
@@ -123,8 +111,8 @@ need_dotgit() {
 ###############################################################################
 # INCLUDE/EXCLUDE COMPILATION
 ###############################################################################
-# Compiles .geetinclude (whitelist) or .geetexclude (blacklist) into
-# Git's repo-local ignore file: <gitdir>/info/exclude
+# Compiles .geetinclude (whitelist) or .gitignore (blacklist) into
+# Git's repo-local ignore file: <gitdir>/.gitignore
 sync_exclude() {
   [[ -n "$SPEC_FILE" ]] || return 0
 
@@ -141,7 +129,7 @@ sync_exclude() {
     else
       echo "# This file makes the template repo behave like a BLACKLIST."
     fi
-    echo "# Git reads this from: <gitdir>/info/exclude"
+    echo "# Git reads this from: <gitdir>/.gitignore"
     echo
 
     if [[ "$SPEC_MODE" == "include" ]]; then

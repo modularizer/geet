@@ -9,7 +9,6 @@
     "bin/",
     "lib/",
     "geetinclude.sample",
-    "geetexclude.sample",
     "README.md",
     "docs/"
   ]

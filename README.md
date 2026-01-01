@@ -22,6 +22,18 @@ Only Git's *view* of the filesystem changes.
 
 ---
 
+## Quickstart
+```bash
+git clone https://github.com/modularizer/geet.git
+cd geet
+npm install -g .
+geet
+```
+
+Try our [Demo](/docs/DEMO.md)
+
+---
+
 ## Table of Contents
 
 1. [Understanding geet](/docs/UNDERSTANDING_GEET.md)
@@ -31,12 +43,3 @@ Only Git's *view* of the filesystem changes.
 5. [Contributing to geet](/docs/CONTRIBUTING.md)
 6. [FAQ](/docs/FAQ.md)
 7. [Demo](/docs/DEMO.md)
-
-
-## Quickstart
-```bash
-git clone https://github.com/modularizer/geet.git
-cd geet
-npm install -g .
-geet
-```

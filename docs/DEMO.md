@@ -6,57 +6,66 @@ This guide walks you through testing geet's core features in under 10 minutes.
 
 ```bash
 # Install geet globally
-npm install -g .
+npm install -g geet
 
-# Or use it directly from source
-alias geet='./bin/geet.sh'
+# Or install from source:
+git clone https://github.com/modularizer/geet.git
+cd geet
+npm install -g .
 ```
 
 ---
 
 ## Demo 1: Create and use a basic template
 
-### Step 1: Create a template repository
+### Step 1: Create normal sample git repo
 
 ```bash
-# Create a new template project
-mkdir my-template
-cd my-template
+# Create a minimal Expo Router app template (5 tiny files)
+mkdir myapp
+cd myapp
 
-# Initialize as a git repo
 git init
 
-# Copy geet tooling into the project
-cp -r /path/to/geet/.geet .
-cp /path/to/geet/geetinclude.sample .geet/.geetinclude
+# Create app directory FIRST
+mkdir -p app/settings
 
-# Create some template files
-mkdir -p app/shared
-cat > app/shared/Button.tsx <<'EOF'
-export default function Button({ label }: { label: string }) {
-  return <button>{label}</button>;
-}
+# 1) Expo Router layout (required)
+cat > app/_layout.tsx <<'EOF'
+import { Stack } from "expo-router";
+export default function Layout(){ return <Stack/>; }
 EOF
 
-cat > package.json <<'EOF'
-{
-  "name": "my-template",
-  "version": "1.0.0"
-}
+# 2) Home screen
+cat > app/index.tsx <<'EOF'
+import { View, Text } from "react-native";
+export default ()=> <View><Text>Home</Text></View>;
 EOF
 
-# Define what should be in the template
-cat > .geet/.geetinclude <<'EOF'
-app/shared/**
-package.json
+# 3) About screen
+cat > app/about.tsx <<'EOF'
+import { View, Text } from "react-native";
+export default ()=> <View><Text>About</Text></View>;
 EOF
 
-# Commit everything to the app repo
+# 4) Nested route
+cat > app/settings/index.tsx <<'EOF'
+import { View, Text } from "react-native";
+export default ()=> <View><Text>Settings</Text></View>;
+EOF
+
+# 5) Minimal Expo config (enables expo-router)
+cat > app.json <<'EOF'
+{ "expo": { "name":"my-template", "slug":"my-template", "plugins":["expo-router"] } }
+EOF
+
 git add .
-git commit -m "Initial template"
+git commit -m "Minimal Expo Router sample with multiple routes"
+```
 
-# Initialize the template layer
-./.geet/lib/init.sh
+### Step 2: Initialize the template layer
+```bash
+geet template mytemplate
 
 # Add files to the template layer
 geet add -A
@@ -194,11 +203,6 @@ cp -r /path/to/geet/.geet .
 # Create files
 echo "shared" > shared.txt
 echo "custom" > custom.txt
-
-# Define blacklist
-cat > .geet/.geetexclude <<'EOF'
-custom.txt
-EOF
 
 git add . && git commit -m "Initial"
 ./.geet/lib/init.sh
