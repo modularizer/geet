@@ -147,10 +147,10 @@ fi
 
 # If dot-git exists, make sure compiled exclude exists (after git.sh runs at least once)
 if [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]]; then
-  if [[ -f "$TEMPLATE_GEETEXCLUDE" ]]; then
-    ok "compiled exclude present: $TEMPLATE_GEETEXCLUDE"
+  if [[ -f "$TEMPLATE_DIR/.geetexclude" ]]; then
+    ok "compiled exclude present: $TEMPLATE_DIR/.geetexclude"
   else
-    warn "compiled exclude missing: $TEMPLATE_GEETEXCLUDE"
+    warn "compiled exclude missing: $TEMPLATE_DIR/.geetexclude"
     info "run: $LAYER_NAME status   (this compiles include/exclude rules)"
   fi
 fi

@@ -10,8 +10,8 @@
 #   $TEMPLATE_DIR                   # e.g. MyApp/.mytemplate
 #   $DOTGIT                         # e.g. MyApp/.mytemplate/dot-git
 #   $TEMPLATE_README                # e.g. MyApp/.mytemplate/README.md
-#   $TEMPLATE_GEETINCLUDE           # e.g. MyApp/.mytemplate/.geetinclude
-#   $TEMPLATE_GEETEXCLUDE           # e.g. MyApp/.mytemplate/.geetexclude
+#   $TEMPLATE_DIR/.geetinclude           # e.g. MyApp/.mytemplate/.geetinclude
+#   $TEMPLATE_DIR/.geetexclude           # e.g. MyApp/.mytemplate/.geetexclude
 #   $GEET_GIT              # e.g. MyApp/.mytemplate/geet-git.sh
 #   $TEMPLATE_GEET_CMD              # e.g. MyApp/.mytemplate/geet.sh
 #   $TEMPLATE_NAME                  # e.g. "mytemplate" but read from .../geet-config.json["name"], falls back to TEMPLATE_NAME
@@ -153,16 +153,15 @@ debug "unable to locate the geet template directory, try specifying --geet-dir. 
 #fi
 debug "TEMPLATE_DIR=$TEMPLATE_DIR"
 DOTGIT="$TEMPLATE_DIR/dot-git"
-TEMPLATE_README="$TEMPLATE_DIR/README.md"
-TEMPLATE_GEETINCLUDE="$TEMPLATE_DIR/.geetinclude"
-TEMPLATE_GEETEXCLUDE="$TEMPLATE_DIR/.geetexclude"
 GEET_GIT="$TEMPLATE_DIR/geet-git.sh"
-TEMPLATE_GEET_CMD="$TEMPLATE_DIR/geet.sh"
-TEMPLATE_DIRNAME="$(basename -- "$TEMPLATE_DIR")" # e.g. .mytemplate
 SOFT_DETACHED_FILE_LIST="$DOTGIT/info/geet-protected"
-geet_git (){
-  exec "$GEET_GIT" "$@"
+geet_git () {
+  log "Calling:" "$GEET_GIT" "$@"
+  "$GEET_GIT" "$@"
+  local rc=$?
+  return $rc
 }
+
 
 # Derive repo dir + config path
 TEMPLATE_JSON="$TEMPLATE_DIR/geet-config.json"

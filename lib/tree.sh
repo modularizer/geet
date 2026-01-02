@@ -23,7 +23,7 @@ need_dotgit() {
 # We rely on compiled excludes existing to ensure the whitelist semantics are
 # actually in effect.
 need_compiled_exclude() {
-  [[ -f "$TEMPLATE_GEETEXCLUDE" ]] || die "missing compiled exclude: $TEMPLATE_GEETEXCLUDE (run: $GEET_ALIAS sync)"
+  [[ -f "$TEMPLATE_DIR/.geetexclude" ]] || die "missing compiled exclude: $TEMPLATE_DIR/.geetexclude (run: $GEET_ALIAS sync)"
 }
 
 # Run git in the layer view (read-only usage only)
@@ -96,7 +96,7 @@ Modes:
 
 Notes:
 - Requires layer gitdir: $DOTGIT
-- Requires compiled exclude: $TEMPLATE_GEETEXCLUDE
+- Requires compiled exclude: $TEMPLATE_DIR/.geetexclude
   If missing, run: $GEET_ALIAS sync
 EOF
 }
@@ -230,7 +230,7 @@ case "$cmd" in
     if [[ "$included" == "NO" ]]; then
       echo
       echo "hint: to include it, add a line to:"
-      echo "  $TEMPLATE_GEETINCLUDE"
+      echo "  $TEMPLATE_DIR/.geetinclude"
       echo "then regenerate excludes by running:"
       echo "  $GEET_ALIAS sync"
     fi

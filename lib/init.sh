@@ -125,11 +125,11 @@ mv "$APP_GIT" "$DOTGIT"
 
 GITINCLUDE_SAMPLE="$TEMPLATE_DIR/geetinclude.sample"
 
-if [[ ! -f "$TEMPLATE_GEETINCLUDE" ]]; then
+if [[ ! -f "$TEMPLATE_DIR/.geetinclude" ]]; then
   if [[ -f "$GITINCLUDE_SAMPLE" ]]; then
     log "installing default whitelist:"
-    log "  $GITINCLUDE_SAMPLE -> $TEMPLATE_GEETINCLUDE"
-    cp "$GITINCLUDE_SAMPLE" "$TEMPLATE_GEETINCLUDE"
+    log "  $GITINCLUDE_SAMPLE -> $TEMPLATE_DIR/.geetinclude"
+    cp "$GITINCLUDE_SAMPLE" "$TEMPLATE_DIR/.geetinclude"
   else
     log "no .geetinclude or geetinclude.sample found (whitelist left empty)"
   fi

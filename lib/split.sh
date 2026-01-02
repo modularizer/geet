@@ -51,7 +51,7 @@ mode="${2:-tracked}"
 
 # Precondition checks
 [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]] || die "layer not initialized (run: $GEET_ALIAS init)"
-[[ -f "$TEMPLATE_GEETEXCLUDE" ]] || die "missing compiled exclude. Run: $GEET_ALIAS sync"
+[[ -f "$TEMPLATE_DIR/.geetexclude" ]] || die "missing compiled exclude. Run: $GEET_ALIAS sync"
 
 # Safety: refuse to export into an existing directory to avoid accidental overwrites.
 if [[ -e "$dest" ]]; then

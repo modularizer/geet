@@ -1,4 +1,5 @@
 sync() {
+  echo "SYNC"
   # Show help if requested
   if [[ "${1:-}" == "help" || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     cat <<EOF
@@ -25,8 +26,8 @@ When to run:
   - Note: Most geet commands auto-sync, so manual sync is rarely needed
 
 File locations:
-  Source:   $TEMPLATE_GEETINCLUDE
-  Output:   $TEMPLATE_GEETEXCLUDE
+  Source:   $TEMPLATE_DIR/.geetinclude
+  Output:   $TEMPLATE_DIR/.geetexclude
 
 Examples:
   $GEET_ALIAS sync  # Compile whitelist rules
@@ -34,7 +35,7 @@ EOF
     return 0
   fi
 
-  [[ -n "$TEMPLATE_GEETINCLUDE" ]] || return 0
+  [[ -f "$TEMPLATE_DIR/.geetinclude" ]] || return 0
 
   # Markers for the auto-populated section
   local START_MARKER="# GEETINCLUDESTART"
@@ -57,13 +58,13 @@ EOF
     else
       compiled_rules+="!$line"$'\n'
     fi
-  done < "$TEMPLATE_GEETINCLUDE"
+  done < "$TEMPLATE_DIR/.geetinclude"
 
   # Read existing .geetexclude or create default structure
   local before_marker=""
   local after_marker=""
 
-  if [[ -f "$TEMPLATE_GEETEXCLUDE" ]]; then
+  if [[ -f "$TEMPLATE_DIR/.geetexclude" ]]; then
     # File exists - extract parts before and after markers
     local in_marker=0
     while IFS= read -r line; do
@@ -80,9 +81,9 @@ EOF
       elif [[ $in_marker -eq 2 ]]; then
         after_marker+="$line"$'\n'
       fi
-    done < "$TEMPLATE_GEETEXCLUDE"
+    done < "$TEMPLATE_DIR/.geetexclude"
   else
-    die "$TEMPLATE_GEETEXCLUDE not found"
+    die "$TEMPLATE_DIR/.geetexclude not found"
   fi
 
   # Write new .geetexclude with compiled rules between markers
@@ -93,5 +94,5 @@ EOF
     printf "%s" "$compiled_rules"
     echo "$END_MARKER"
     printf "%s" "$after_marker"
-  } > "$EXCLUDE_FILE"
+  } > "$TEMPLATE_DIR/.geetexclude"
 }

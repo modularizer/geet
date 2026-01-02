@@ -7,7 +7,7 @@
 
 # Helper: git wrapper that uses template's git dir
 gitx() {
-  git --git-dir="$DOTGIT" --work-tree="$APP_DIR" -c "core.excludesFile=$TEMPLATE_GEETEXCLUDE" "$@"
+  git --git-dir="$DOTGIT" --work-tree="$APP_DIR" -c "core.excludesFile=$TEMPLATE_DIR/.geetexclude" "$@"
 }
 
 # Helper: sync .geetinclude to .geetexclude
