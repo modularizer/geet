@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
+GEET_BIN="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+GEET_LIB="$(cd -- "$GEET_BIN/../lib" && pwd)"
 source digest-and-locate.sh "$@"
 
 cmd="${1:-help}"
@@ -71,10 +74,15 @@ case "$cmd" in
 
   # Explicit escape hatch
   git)
-    exec "$TEMPLATE_GEET_GIT" "$@"
+    exec "$GEET_GIT" "$@"
     ;;
 
-  detach)
+  soft-detach,soft_detach,slide)
+    source "$GEET_LIB/detach.sh"
+    soft_detach "$@"
+    ;;
+
+  detach,hard-detach)
     source "$GEET_LIB/detach.sh"
     detach "$@"
     ;;
@@ -84,13 +92,33 @@ case "$cmd" in
       detached "$@"
       ;;
 
+  soft-detached,soft_detached,slid)
+        source "$GEET_LIB/detach.sh"
+        soft_detached "$@"
+        ;;
+
   retach)
       source "$GEET_LIB/detach.sh"
       retach "$@"
       ;;
 
+  precommit,pc)
+    source "$GEET_LIB/pre-commit/hook.sh"
+    ;;
+
+  remove,rm,destroy)
+    brave_guard
+    source "$GEET_LIB/remove.sh"
+    retach "$@"
+    ;;
+
+  bug,feature,issue,whoops,suggest)
+    source "$GEET_LIB/whoops.sh"
+    open_issue "$@"
+    ;;
+
   # Default: assume git subcommand
   *)
-    exec "$TEMPLATE_GEET_GIT" "$cmd" "$@"
+    exec "$GEET_GIT" "$cmd" "$@"
     ;;
 esac

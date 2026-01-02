@@ -22,6 +22,9 @@ FILE MANAGEMENT:
   tree [list|tracked|all]   Show what files the template includes
   split <dest> [mode]       Export template files to external folder
   sync                      Compile .geetinclude whitelist into .geetexclude
+  detach                    "Detach" a file, folder, or glob to always use "keep-ours" to resolve merge conflicts, essentially allowing you to overwrite a file's template
+  retach                    undo a detach command
+  detached                  list files that have been detached
 
 OPERATIONS:
   session run [opts] -- cmd Run command in isolated template snapshot

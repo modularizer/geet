@@ -12,7 +12,7 @@
 #   $TEMPLATE_README                # e.g. MyApp/.mytemplate/README.md
 #   $TEMPLATE_GEETINCLUDE           # e.g. MyApp/.mytemplate/.geetinclude
 #   $TEMPLATE_GEETEXCLUDE           # e.g. MyApp/.mytemplate/.geetexclude
-#   $TEMPLATE_GEET_GIT              # e.g. MyApp/.mytemplate/geet-git.sh
+#   $GEET_GIT              # e.g. MyApp/.mytemplate/geet-git.sh
 #   $TEMPLATE_GEET_CMD              # e.g. MyApp/.mytemplate/geet.sh
 #   $TEMPLATE_NAME                  # e.g. "mytemplate" but read from .../geet-config.json["name"], falls back to TEMPLATE_NAME
 #   $TEMPLATE_DESC                  # e.g. "A cool react native base project example" but read from .../geet-config.json["desc"], falls back to empty
@@ -149,9 +149,13 @@ DOTGIT="$TEMPLATE_DIR/dot-git"
 TEMPLATE_README="$TEMPLATE_DIR/README.md"
 TEMPLATE_GEETINCLUDE="$TEMPLATE_DIR/.geetinclude"
 TEMPLATE_GEETEXCLUDE="$TEMPLATE_DIR/.geetexclude"
-TEMPLATE_GEET_GIT="$TEMPLATE_DIR/geet-git.sh"
+GEET_GIT="$TEMPLATE_DIR/geet-git.sh"
 TEMPLATE_GEET_CMD="$TEMPLATE_DIR/geet.sh"
 TEMPLATE_DIRNAME="$(basename -- "$TEMPLATE_DIR")" # e.g. .mytemplate
+SOFT_DETACHED_FILE_LIST="$DOTGIT/info/geet-protected"
+geet_git (){
+  exec "$GEET_GIT" "$@"
+}
 
 # Derive repo dir + config path
 TEMPLATE_JSON="$TEMPLATE_DIR/geet-config.json"
