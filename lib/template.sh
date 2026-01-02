@@ -212,7 +212,20 @@ cat > "$NEW_LAYER_DIR/geet-config.json" <<EOFCONFIG
   "ghName": "$LAYER_NAME",
   "ghURL": "https://github.com/$GH_USER/$LAYER_NAME",
   "ghSSH": "git@github.com:$GH_USER/$LAYER_NAME.git",
-  "ghHTTPS": "https://github.com/$GH_USER/$LAYER_NAME.git"
+  "ghHTTPS": "https://github.com/$GH_USER/$LAYER_NAME.git",
+  "preventCommit": {
+    "filePatterns": [
+      ".*\\.env.*",
+      ".*secret.*",
+      ".*\\.key$"
+    ],
+    "contentPatterns": [
+      "API_KEY=",
+      "SECRET_KEY=",
+      "password:\\\\s*[\"'].*[\"']",
+      "TODO.*remove.*template"
+    ]
+  }
 }
 EOFCONFIG
 
@@ -331,6 +344,163 @@ fi
 "$NEW_LAYER_DIR/geet.sh" sync >/dev/null
 "$NEW_LAYER_DIR/geet-git.sh" add ".$LAYER_NAME" ":!.$LAYER_NAME/dot-git/"
 "$NEW_LAYER_DIR/geet-git.sh" commit -m "Initial $LAYER_NAME template" 2>/dev/null || true
+
+###############################################################################
+# SETUP README PROMOTION
+###############################################################################
+# Promote .mytemplate/README.md to README.md so it shows on GitHub
+# Uses merge=keep-ours to prevent conflicts after README files diverge
+
+log "setting up README.md promotion (see docs/AUTO_PROMOTE.md)"
+
+# Set up keep-ours merge driver (prevents conflicts)
+git --git-dir="$NEW_DOTGIT" config merge.keep-ours.name "Always keep working tree version"
+git --git-dir="$NEW_DOTGIT" config merge.keep-ours.driver "true"
+
+# Get hash of README.md content
+readme_hash=$(git --git-dir="$NEW_DOTGIT" hash-object -w "$NEW_LAYER_DIR/README.md")
+
+# Stage README at promoted location (root)
+git --git-dir="$NEW_DOTGIT" update-index --add --cacheinfo 100644 "$readme_hash" "README.md"
+
+# Configure merge strategy for promoted README
+mkdir -p "$NEW_DOTGIT/info"
+echo "README.md merge=keep-ours" >> "$NEW_DOTGIT/info/attributes"
+
+###############################################################################
+# SETUP PRE-COMMIT HOOK FOR AUTO-PROMOTION
+###############################################################################
+# Create pre-commit hook to auto-promote README on future commits
+
+log "creating pre-commit hook for auto-promotion"
+
+mkdir -p "$NEW_DOTGIT/hooks"
+cat > "$NEW_DOTGIT/hooks/pre-commit" <<'EOFHOOK'
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Pre-commit hook for template repo
+# 1. Checks for app-specific patterns (safety)
+# 2. Auto-promotes files (e.g., README)
+
+LAYER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+LAYER_NAME="$(basename "$LAYER_DIR")"
+DOTGIT="$LAYER_DIR/dot-git"
+CONFIG="$LAYER_DIR/geet-config.json"
+
+###############################################################################
+# PREVENT COMMITTING APP-SPECIFIC CODE
+###############################################################################
+# Check for patterns that indicate implementation-specific code
+
+if [[ -f "$CONFIG" ]] && command -v jq >/dev/null 2>&1; then
+  # Read pattern lists from config
+  file_patterns=$(jq -r '.preventCommit.filePatterns[]? // empty' "$CONFIG" 2>/dev/null || true)
+  content_patterns=$(jq -r '.preventCommit.contentPatterns[]? // empty' "$CONFIG" 2>/dev/null || true)
+
+  errors=()
+
+  # Get list of staged files
+  staged_files=$(git --git-dir="$DOTGIT" diff --cached --name-only)
+
+  # Check file patterns
+  if [[ -n "$file_patterns" ]]; then
+    while IFS= read -r pattern; do
+      [[ -z "$pattern" ]] && continue
+      while IFS= read -r file; do
+        [[ -z "$file" ]] && continue
+        if echo "$file" | grep -qE "$pattern"; then
+          errors+=("FILE: $file matches pattern: $pattern")
+        fi
+      done <<< "$staged_files"
+    done <<< "$file_patterns"
+  fi
+
+  # Check content patterns
+  if [[ -n "$content_patterns" ]]; then
+    while IFS= read -r pattern; do
+      [[ -z "$pattern" ]] && continue
+      while IFS= read -r file; do
+        [[ -z "$file" ]] && continue
+        # Skip binary files and directories
+        [[ ! -f "$file" ]] && continue
+        file -b "$file" 2>/dev/null | grep -q text || continue
+
+        # Search for pattern in file
+        matches=$(grep -nE "$pattern" "$file" 2>/dev/null || true)
+        if [[ -n "$matches" ]]; then
+          while IFS= read -r match; do
+            errors+=("CONTENT: $file matches pattern: $pattern"$'\n'"  → $match")
+          done <<< "$matches"
+        fi
+      done <<< "$staged_files"
+    done <<< "$content_patterns"
+  fi
+
+  # If errors found, fail the commit
+  if [[ ${#errors[@]} -gt 0 ]]; then
+    echo "❌ [pre-commit] Found patterns that may indicate app-specific code:" >&2
+    echo >&2
+    for error in "${errors[@]}"; do
+      echo "  $error" >&2
+    done
+    echo >&2
+    echo "These patterns suggest implementation-specific code that shouldn't be in the template." >&2
+    echo >&2
+    echo "To bypass this check: git commit --no-verify" >&2
+    echo "To fix: Remove the matched patterns or update $CONFIG" >&2
+    exit 1
+  fi
+fi
+
+###############################################################################
+# AUTO-PROMOTE README
+###############################################################################
+# If .mytemplate/README.md is being committed, also promote to README.md
+
+if git --git-dir="$DOTGIT" diff --cached --name-only | grep -q "^.$LAYER_NAME/README.md$"; then
+  # README is being committed, promote it
+  readme_path=".$LAYER_NAME/README.md"
+
+  if [[ -f "$readme_path" ]]; then
+    # Get hash of the staged version (not working tree)
+    hash=$(git --git-dir="$DOTGIT" hash-object -w "$readme_path")
+
+    # Stage it at promoted location
+    git --git-dir="$DOTGIT" update-index --add --cacheinfo 100644 "$hash" "README.md"
+
+    echo "✅ [pre-commit] Auto-promoted $readme_path → README.md"
+  fi
+fi
+
+###############################################################################
+# USER CUSTOMIZATIONS
+###############################################################################
+# Add your own pre-commit logic below:
+# - Promote other files
+# - Run linters
+# - Generate files
+# - etc.
+
+EOFHOOK
+
+chmod +x "$NEW_DOTGIT/hooks/pre-commit"
+log "pre-commit hook created:"
+log "  • Auto-promotes README.md to root"
+log "  • Checks for app-specific patterns (see geet-config.json)"
+
+# Commit the initial promotion
+git --git-dir="$NEW_DOTGIT" --work-tree="$APP_DIR" commit -m "Promote README.md to root
+
+This allows the template README to show on GitHub at the root level,
+while the working tree can have a different README.md for the app.
+
+Uses merge=keep-ours to prevent conflicts when files diverge.
+Auto-promotes on each commit via pre-commit hook.
+See docs/AUTO_PROMOTE.md for details." 2>/dev/null || true
+
+log "README.md will appear at root on GitHub"
+log "future edits to .$LAYER_NAME/README.md auto-promote to README.md"
 
 ###############################################################################
 # SETUP CUSTOM ALIAS (package.json if present)

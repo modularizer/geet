@@ -19,7 +19,6 @@ TEMPLATE MANAGEMENT:
   clone <repo>              Clone a git repository (standard git clone)
 
 FILE MANAGEMENT:
-  include <path> [...]      Add files/paths to template whitelist (.geetinclude)
   tree [list|tracked|all]   Show what files the template includes
   split <dest> [mode]       Export template files to external folder
   sync                      Compile .geetinclude whitelist into .geetexclude
@@ -40,7 +39,6 @@ Get help on any command:
 Examples:
   $GEET_ALIAS template my-stack "A modern web stack"
   $GEET_ALIAS install https://github.com/user/template-repo
-  $GEET_ALIAS include src/components
   $GEET_ALIAS tree list
   $GEET_ALIAS publish --public
   $GEET_ALIAS status

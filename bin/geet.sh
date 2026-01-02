@@ -29,11 +29,6 @@ case "$cmd" in
     tree "$@"
     ;;
 
-  include)
-    source "$GEET_LIB/include.sh"
-    include "$@"
-    ;;
-
   split)
     source "$GEET_LIB/split.sh"
     split "$@"

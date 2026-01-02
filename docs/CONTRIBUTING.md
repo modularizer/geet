@@ -29,7 +29,6 @@ geet/
     doctor.sh       # Health checks
     gh.sh           # GitHub integration
     template.sh     # Create new layer
-    include.sh      # Add files to whitelist
 
   bin/
     geet.sh         # npm executable wrapper
