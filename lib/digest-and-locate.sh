@@ -162,6 +162,7 @@ else
 fi
 
 APP_DIR="$(dirname -- "$TEMPLATE_DIR")"
+APP_NAME="$(basename "$APP_DIR")"
 debug "APP_DIR=$APP_DIR"
 # Read a key from the template JSON config.
 # Uses jq; returns default (or empty string) if key missing or null.
@@ -184,6 +185,29 @@ TEMPLATE_DESC="$(read_config desc "")"
 TEMPLATE_GH_URL="$(read_config ghURL "https://github.com/$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME")"
 TEMPLATE_GH_SSH_REMOTE="$(read_config ghSSH "git@github.com:$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME.git")"
 TEMPLATE_GH_HTTPS_REMOTE="$(read_config ghHTTPS "$TEMPLATE_GH_URL.git")"
+DEMO_DOC_APP_NAME="$(read_config demoDocAppName "MyApp")"
+DEMO_DOC_TEMPLATE_NAME="$(read_config demoDocTemplateName "mytemplate")"
+
+# Auto-detect GitHub username
+GH_USER="your-github-username"
+# Try gh CLI first
+if command -v gh >/dev/null 2>&1; then
+  if GH_USER_DETECTED="$(gh api user --jq .login 2>/dev/null)"; then
+    if [[ -n "$GH_USER_DETECTED" ]]; then
+      GH_USER="$GH_USER_DETECTED"
+      debug "detected GitHub user from gh CLI: $GH_USER"
+    fi
+  fi
+fi
+# Try git config as fallback
+if [[ "$GH_USER" == "your-github-username" ]]; then
+  if GH_USER_DETECTED="$(git config --get github.user 2>/dev/null)"; then
+    if [[ -n "$GH_USER_DETECTED" ]]; then
+      GH_USER="$GH_USER_DETECTED"
+      debug "detected GitHub user from git config: $GH_USER"
+    fi
+  fi
+fi
 
 GEET_DIGESTED=1
 debug "digested!"

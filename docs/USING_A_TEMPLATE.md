@@ -2,10 +2,10 @@
 
 ## Quick start
 
-### Option 1: Clone command (recommended)
+### Option 1: Install command (recommended)
 
 ```bash
-geet clone <template-repo-url> MyApp
+geet install <template-repo-url> MyApp
 ```
 
 This command:
@@ -18,7 +18,7 @@ This command:
 ```bash
 git clone <template-repo-url> MyApp
 cd MyApp
-./.geet/lib/init.sh
+geet init
 ```
 
 ### What `init` does
@@ -51,7 +51,7 @@ When you want template changes:
 
 ```bash
 geet pull
-# Or: ./.geet/lib/cli.sh git pull
+# Or: geet git pull
 
 # Then commit the changes with normal git:
 git commit -am "Update template"
@@ -69,9 +69,9 @@ Templates can include a one-time setup script that runs after initialization.
 
 ### Using post-init hooks
 
-Pass arguments during clone:
+Pass arguments during install:
 ```bash
-geet clone <repo> MyApp -- --app-name "My App" --bundle-id com.example.myapp
+geet install <repo> MyApp -- --app-name "My App" --bundle-id com.example.myapp
 ```
 
 Arguments after `--` are passed to the post-init hook.
@@ -79,7 +79,7 @@ Arguments after `--` are passed to the post-init hook.
 ### Skipping post-init
 
 ```bash
-GEET_RUN_POST_INIT=0 geet clone <repo> MyApp
+GEET_RUN_POST_INIT=0 geet install <repo> MyApp
 ```
 
 ## Inspecting what's in the template
@@ -87,8 +87,8 @@ GEET_RUN_POST_INIT=0 geet clone <repo> MyApp
 ### View as tree
 
 ```bash
-geet tree tree         # tracked files
-geet tree tree all     # all whitelisted files
+geet tree              # tracked files (default)
+geet tree all          # all whitelisted files
 ```
 
 ### Check specific file

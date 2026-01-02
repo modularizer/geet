@@ -1,10 +1,9 @@
-#!/usr/bin/env bash
-set -euo pipefail
-###############################################################################
-# HELPERS
-###############################################################################
-die() { echo "[template] $*" >&2; exit 1; }
-log() { echo "[template] $*" >&2; }
+# template.sh — sourceable template creation function
+# Usage:
+#   source template.sh
+#   template [layer-name]
+#
+# Creates a new template layer in the current app.
 
 ###############################################################################
 # template.sh — promote the CURRENT APP into a NEW TEMPLATE REPO that the owner can commit files into, and publish
@@ -46,64 +45,89 @@ log() { echo "[template] $*" >&2; }
 #
 ###############################################################################
 
+template() {
+debug "creating new template layer, APP_NAME=$APP_NAME"
+
 ###############################################################################
-# PATH DISCOVERY
+# ARGUMENT PARSING & VALIDATION
 ###############################################################################
-GEET_DIR="${}"
-# Directory this script lives in
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Determine if we're running from a layer or from global installation
-# If SCRIPT_DIR is like /usr/lib/node_modules/geet/lib, we're global
-# If SCRIPT_DIR is like /path/to/MyApp/.geet/lib, we're in a layer
+# Required argument: explicit name for the new template layer
+# Example:
+#   $GEET_ALIAS template sk2   -> creates .sk2
+#
+RAW_NAME="${1:-}"
 
-log "DEBUG: SCRIPT_DIR=$SCRIPT_DIR"
+# Show help if requested
+if [[ "$RAW_NAME" == "help" || "$RAW_NAME" == "-h" || "$RAW_NAME" == "--help" ]]; then
+  cat <<EOF
+$GEET_ALIAS template — promote the CURRENT APP into a NEW TEMPLATE REPO
 
-if [[ "$SCRIPT_DIR" == */geet/lib ]]; then
-  log "DEBUG: Detected global installation"
-  # Global installation - use git to find repo root, or current directory
-  if ROOT_TMP="$(git rev-parse --show-toplevel 2>/dev/null)"; then
-    ROOT="$ROOT_TMP"
-    log "DEBUG: Found git repo root: $ROOT"
-  else
-    # No git repo, use current directory (will initialize one later)
-    ROOT="$(pwd)"
-    log "DEBUG: No git repo, using pwd: $ROOT"
-  fi
-  BASE_LAYER_DIR="$SCRIPT_DIR/.."  # Use global geet as source
-  BASE_LAYER_NAME="geet"
-else
-  log "DEBUG: Detected local layer installation"
-  # Local layer installation
-  BASE_LAYER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"  # .geet
-  ROOT="$(cd "$BASE_LAYER_DIR/.." && pwd)"  # MyApp/
-  BASE_LAYER_NAME="$(basename "$BASE_LAYER_DIR")"
-  BASE_LAYER_NAME="${BASE_LAYER_NAME#.}"
-  log "DEBUG: ROOT from layer: $ROOT"
+This script creates a NEW hidden layer folder (e.g., .MyApp2 or .sk2)
+and initializes a template git repo for it, WITHOUT disturbing:
+  - the app repo (.git)
+  - any existing layers (e.g., .geet)
+
+Think of this as:
+  "I built something useful, and I think that SOME but not all of my code is re-usable.
+   I want to publish some of my code for others to use (or to re-use myself)...
+   But I don't want to spend weeks refactoring to split apart the reusable code from
+   the implementation specific code. In fact, it may not even be possible"
+
+Usage:
+  $GEET_ALIAS template <name> [description]
+
+Examples:
+  $GEET_ALIAS template mytemplate
+  $GEET_ALIAS template mytemplate "A React Native base project"
+  $GEET_ALIAS template sk2 "Starter kit v2 with TypeScript"
+
+Requirements:
+  - <name> must be non-empty and different from the app name
+  - <name> cannot contain spaces
+
+What this creates:
+  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/         (new layer directory)
+  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/dot-git/  (template's git repository)
+  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/geet-git.sh  (git wrapper for template repo)
+  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/geet.sh      (geet wrapper for template)
+  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/.geetinclude (whitelist of files to include)
+  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/.geetexclude (compiled excludes)
+  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/README.md    (template documentation)
+EOF
+  return 0
 fi
 
-# App name = directory name of the project root
-APP_NAME="$(basename "$ROOT")"
-log "DEBUG: APP_NAME=$APP_NAME, ROOT=$ROOT"
+# Validation: must be non-empty
+if [[ -z "$RAW_NAME" ]]; then
+  die "template requires a name argument (e.g., '$GEET_ALIAS template mytemplate')"
+fi
 
-###############################################################################
-# ARGUMENT PARSING
-###############################################################################
-
-# Optional argument: explicit name for the new template layer
-# Example:
-#   ./lib/template.sh sk2   -> creates .sk2
-#
-# Default behavior:
-#   ./lib/template.sh       -> creates .<AppName>
-#
-RAW_NAME="${1:-$APP_NAME}"
-
-# Normalize:
-# - ensure no leading dot
-# - layer folders are always hidden
+# Normalize: remove leading dot if present
 LAYER_NAME="${RAW_NAME#.}"
-NEW_LAYER_DIR="$ROOT/.${LAYER_NAME}"
+
+# Validation: cannot be empty after normalization
+if [[ -z "$LAYER_NAME" ]]; then
+  die "template name cannot be empty or just a dot"
+fi
+
+# Validation: cannot contain spaces
+if [[ "$LAYER_NAME" =~ [[:space:]] ]]; then
+  die "template name cannot contain spaces: '$LAYER_NAME'"
+fi
+
+# Validation: must be different from app name
+if [[ "$LAYER_NAME" == "$APP_NAME" ]]; then
+  die "template name must be different from app name: '$APP_NAME'"
+fi
+
+# Optional description argument
+NEW_TEMPLATE_DESC="${2:-}"
+
+
+
+NEW_LAYER_DIR="$APP_DIR/.${LAYER_NAME}"
+debug "new template layer will be created at: $NEW_LAYER_DIR"
 
 
 
@@ -112,20 +136,22 @@ NEW_LAYER_DIR="$ROOT/.${LAYER_NAME}"
 ###############################################################################
 
 # Check if we have a git repo in current directory
-if [[ ! -d "$ROOT/.git" ]]; then
-  log "no git repo found at $ROOT/.git"
+if [[ ! -d "$APP_DIR/.git" ]]; then
+  log "no git repo found at $APP_DIR/.git"
   log "initializing new git repo..."
-  git -C "$ROOT" init >/dev/null
+  git -C "$APP_DIR" init >/dev/null
 fi
 
-# Do not overwrite an existing layer
+# Idempotency check - if layer already exists, exit cleanly
 if [[ -e "$NEW_LAYER_DIR" ]]; then
-  die "layer already exists: $NEW_LAYER_DIR"
+  log "layer already exists: $NEW_LAYER_DIR"
+  log "leaving existing layer undisturbed"
+  return 0
 fi
 
-# We expect git.sh and init.sh to exist in the base layer
-if [[ ! -f "$BASE_LAYER_DIR/lib/git.sh" || ! -f "$BASE_LAYER_DIR/lib/init.sh" ]]; then
-  die "source files missing (expected at $BASE_LAYER_DIR/lib/)"
+# We expect the base layer (TEMPLATE_DIR) to have the required files
+if [[ ! -f "$GEET_LIB/git.sh" || ! -f "$GEET_LIB/init.sh" ]]; then
+  die "source files missing (expected at $GEET_LIB/)"
 fi
 
 ###############################################################################
@@ -138,13 +164,18 @@ log "creating new template layer: .$LAYER_NAME"
 mkdir -p "$NEW_LAYER_DIR"
 
 # append the layer name into the hierarchy
-cp "$BASE_LAYER_DIR/.geethier" "$NEW_LAYER_DIR/.geethier" 2>/dev/null
-echo "$LAYER_NAME\n" >> "$NEW_LAYER_DIR/.geethier"
+# Copy from the base template's .geethier if it exists
+if [[ -f "$TEMPLATE_DIR/.geethier" ]]; then
+  cp "$TEMPLATE_DIR/.geethier" "$NEW_LAYER_DIR/.geethier"
+else
+  touch "$NEW_LAYER_DIR/.geethier"
+fi
+echo "$LAYER_NAME" >> "$NEW_LAYER_DIR/.geethier"
 
 cat > "$NEW_LAYER_DIR/README.md" <<EOFREADME
-# Welcome to the "$NEW_LAYER_DIR" template!
+# Welcome to the "$LAYER_NAME" template!
 
-This template was created with [geet](https://github.com/modularizer/geet),
+$(if [[ -n "$NEW_TEMPLATE_DESC" ]]; then echo "$NEW_TEMPLATE_DESC"; echo; fi)This template was created with [geet](https://github.com/modularizer/geet),
 a CLI git wrapper which acts as an alternative to git submodules,
 allowing publishing a template which controls files which are interspersed in the same working directory as your project.
 
@@ -154,7 +185,7 @@ allowing publishing a template which controls files which are interspersed in th
   - They ALSO are tracked by the remote template repo
   - If and when you wish, you can pull updates from the template repo into your project and add and commit the files into your repo
   - If you are a developer/contributor of the template repo, you can optionally push code back to the template repo using a different git command
-2. `$NEW_LAYER_DIR/geet.sh` or just `geet` is the suggested entrypoint for all your pull/push git-like commands. It protects you and adds some features. More on that later.
+2. `$GEET_ALIAS` is the suggested entrypoint for all your pull/push git-like commands. It protects you and adds some features. More on that later.
 3. $NEW_LAYER_DIR/git.sh is the base git command controlling this template repo. It runs
     exec git --git-dir="$DOTGIT" --work-tree="$ROOT" -c "core.excludesFile=$EXCLUDE_FILE" "\$@"
    but use with caution, and prefer to use the suggested entrypoint, because stuff like clean, reset, checkout commands on the template repo could accidentally destroy files in your actual repo
@@ -163,15 +194,39 @@ allowing publishing a template which controls files which are interspersed in th
    - Let's say your actual full app is 80% of the code and the generic stuff you are turning into a template is only 20% of the code, it might be best to exclude everything to avoid committing implementation-specific code to the template repo, then add some generic files and folders back in, to allow commiting them to the template. This is when you would use .geetinclude for the convenience
    - Alternatively, if your primary goal is to develop a template, and 80% of your code is reusable, but then you just have 20% of "sample" code that you don't want included, maybe just overwrite .geetexclude file entierly, **but leave \*\*/dot-git/ excluded**
    - read the comments in .geetexclude for more info
-   - use `geet tree` to see what is currently included in the template repo
+   - use `$GEET_ALIAS tree` to see what is currently included in the template repo
 6. geet supports many layered templating, so if you want to extend a template and publish as a new template it is definitly possible! See .geehier to see how many levels this one has
 
 If you're the owner of this template, feel free to overwrite or add to this README to tell users about what your project does. It's all your's from here.
+
+NOTE: this is an auto-generated README but it is likely you can find more info about this template at [https://github.com/$GH_USER/$LAYER_NAME](https://github.com/$GH_USER/$LAYER_NAME), worth trying?!
 EOFREADME
 
-cat > "$NEW_LAYER_DIR/.geetexclude" <<EOFGEETINCLUDE
-# Add your include stuff here, you can call 'geet sync' to sync it to the .geetexclude if you wish, but it will also auto-sync on every geet command
+# Create geet-config.json with defaults
+cat > "$NEW_LAYER_DIR/geet-config.json" <<EOFCONFIG
+{
+  "name": "$LAYER_NAME",
+  "desc": "$NEW_TEMPLATE_DESC",
+  "geetAlias": "$GEET_ALIAS",
+  "ghUser": "$GH_USER",
+  "ghName": "$LAYER_NAME",
+  "ghURL": "https://github.com/$GH_USER/$LAYER_NAME",
+  "ghSSH": "git@github.com:$GH_USER/$LAYER_NAME.git",
+  "ghHTTPS": "https://github.com/$GH_USER/$LAYER_NAME.git"
+}
+EOFCONFIG
+
+log "created geet-config.json (edit to set your GitHub info)"
+
+# Create or copy .geetinclude from base template
+if [[ -f "$TEMPLATE_GEETINCLUDE" ]]; then
+  log "copying .geetinclude template from $TEMPLATE_GEETINCLUDE"
+  cp "$TEMPLATE_GEETINCLUDE" "$NEW_LAYER_DIR/.geetinclude"
+else
+  cat > "$NEW_LAYER_DIR/.geetinclude" <<'EOFGEETINCLUDE'
+# Add your include stuff here, you can call '$GEET_ALIAS sync' to sync it to the .geetexclude if you wish, but it will also auto-sync on every geet command
 EOFGEETINCLUDE
+fi
 
 # Create initial .geetexclude with base rules and markers for compiled includes
 cat > "$NEW_LAYER_DIR/.geetexclude" <<EOFGEETEXCLUDE
@@ -182,7 +237,7 @@ cat > "$NEW_LAYER_DIR/.geetexclude" <<EOFGEETEXCLUDE
 # A: YES BUT: you MUST ensure **/dot-git/ gets ignored/excluded
 
 # Q: How to sync from my .$LAYER_NAME/.geetinclude?
-# A: run `geet sync` or `.$LAYER_NAME/bin/git-sync.sh`
+# A: run \`$GEET_ALIAS sync\` or \`.$LAYER_NAME/bin/git-sync.sh\`
 
 #-----------------------------------------------------------------------------------------------------------------------
 # DEFAULT INCLUDE SECTION (optional)
@@ -204,7 +259,7 @@ cat > "$NEW_LAYER_DIR/.geetexclude" <<EOFGEETEXCLUDE
 # GEETINCLUDEEND
 
 #-----------------------------------------------------------------------------------------------------------------------
-# MANUAL EXLUDE SECTION
+# MANUAL EXCLUDE SECTION
 #    treat this part as your standard .gitignore, if you want to operate on an exclude basis vs an include basis
 #    typically either add to this section OR use .geetinclude, not both
 #    technically you could use both this section and your .geetinclude, but why?
@@ -221,64 +276,47 @@ EOFGEETEXCLUDE
 ###############################################################################
 # INITIALIZE TEMPLATE GIT REPO FOR THE NEW LAYER
 ###############################################################################
-DOTGIT="$NEW_LAYER_DIR/dot-git"
+NEW_DOTGIT="$NEW_LAYER_DIR/dot-git"
 
-if [ ! -d "$ROOT/.git" ]; then
-  log "temporarily moving $ROOT/.git to $ROOT/not-git"
-  mv "$ROOT/.git" "$ROOT/not-git"
+if [ -d "$APP_DIR/.git" ]; then
+  log "temporarily moving $APP_DIR/.git to $APP_DIR/not-git"
+  mv "$APP_DIR/.git" "$APP_DIR/not-git"
 fi
 
-log "initializing template git repo for $LAYER_NAME using 'git init --separate-git-dir=$DOTGIT $ROOT'"
-git init --separate-git-dir="$DOTGIT" "$ROOT"
+log "initializing template git repo for $LAYER_NAME using 'git init --separate-git-dir=$NEW_DOTGIT $APP_DIR'"
+git init --separate-git-dir="$NEW_DOTGIT" "$APP_DIR"
 
 log "removing the pointer file that git leaves behind when --separate-git-dir is specified"
-rm "$ROOT/.git"
+rm "$APP_DIR/.git"
 
-if [ -d "$ROOT/not-git" ]; then
-  log "restoring our original git dir from $ROOT/not-git back to $ROOT/.git"
-  mv "$ROOT/not-git" "$ROOT/.git"
+if [ -d "$APP_DIR/not-git" ]; then
+  log "restoring our original git dir from $APP_DIR/not-git back to $APP_DIR/.git"
+  mv "$APP_DIR/not-git" "$APP_DIR/.git"
 fi
 
 log "don't worry, that file-shuffle was kinda ugly but it was a one-time thing, we don't need to do on every command"
 log "instead, in the future we will use something like 'git --git-dir=<somefolder> --work-tree=<somefolder> -c core.exludesFile=<somefile>'"
 
 ###############################################################################
-# MAKE A GIT WRAPPER
+# COPY WRAPPER SCRIPTS FROM BASE LAYER
 ###############################################################################
-cat > "$NEW_LAYER_DIR/geet-git.sh" <<EOFGIT
-#!/usr/bin/env bash
+# Copy geet-git.sh wrapper from base layer (e.g., from .geet/)
+if [[ -f "$TEMPLATE_GEET_GIT" ]]; then
+  log "copying geet-git.sh wrapper from $TEMPLATE_GEET_GIT"
+  cp "$TEMPLATE_GEET_GIT" "$NEW_LAYER_DIR/geet-git.sh"
+  chmod +x "$NEW_LAYER_DIR/geet-git.sh"
+else
+  die "missing base layer geet-git.sh: $TEMPLATE_GEET_GIT"
+fi
 
-THIS_FILE="\${BASH_SOURCE[0]}"
-THIS_DIR="\$(cd -- "\$(dirname -- "\$THIS_FILE")" && pwd)"
-PARENT_DIR="\$(dirname "\$THIS_DIR")"
-
-# this file behaves like git, but always specifies our correct git directory, working tree, and gitignore
-exec git --git-dir="\$THIS_DIR/dot-git" --work-tree="\$PARENT_DIR" -c "core.excludesFile=\$THIS_DIR/.geetexclude" "\$@"
-EOFGIT
-chmod +x "$NEW_LAYER_DIR/geet-git.sh"
-log "created geet.sh wrapper (ensures excludesFile is always applied)"
-
-###############################################################################
-# MAKE A GEET WRAPPER
-###############################################################################
-cat > "$NEW_LAYER_DIR/geet.sh" <<EOFGEET
-#!/usr/bin/env bash
-# this file behaves like geet, but always specifies our correct template directory, so it can be called from anywhere
-
-# first, check if geet is installed, else tell then how to installation
-command -v geet >/dev/null 2>\&1 || {
-  echo "geet not installed. Install it first." >\&2
-  exit 127
-}
-
-THIS_FILE="\${BASH_SOURCE[0]}"
-THIS_DIR="\$(cd -- "\$(dirname -- "\$THIS_FILE")" && pwd)"
-
-# now, call geet
-exec geet --geet-dir "\$THIS_DIR" "\$@"
-EOFGEET
-chmod +x "$NEW_LAYER_DIR/geet.sh"
-log "created geet.sh wrapper (ensures geet sees the correct template dir)"
+# Copy geet.sh wrapper from base layer
+if [[ -f "$TEMPLATE_GEET_CMD" ]]; then
+  log "copying geet.sh wrapper from $TEMPLATE_GEET_CMD"
+  cp "$TEMPLATE_GEET_CMD" "$NEW_LAYER_DIR/geet.sh"
+  chmod +x "$NEW_LAYER_DIR/geet.sh"
+else
+  die "missing base layer geet.sh: $TEMPLATE_GEET_CMD"
+fi
 
 ###############################################################################
 # COMPILE WHITELIST AND CREATE INITIAL COMMIT
@@ -291,8 +329,33 @@ log "created geet.sh wrapper (ensures geet sees the correct template dir)"
 #
 # First, compile excludes by calling status (idempotent).
 "$NEW_LAYER_DIR/geet.sh" sync >/dev/null
-"$NEW_LAYER_DIR/git.sh" add ".$LAYER_NAME" ":!.$LAYER_NAME/dot-git/"
-"$NEW_LAYER_DIR/git.sh" commit -m "Initial $LAYER_NAME template" 2>/dev/null || true
+"$NEW_LAYER_DIR/geet-git.sh" add ".$LAYER_NAME" ":!.$LAYER_NAME/dot-git/"
+"$NEW_LAYER_DIR/geet-git.sh" commit -m "Initial $LAYER_NAME template" 2>/dev/null || true
+
+###############################################################################
+# SETUP CUSTOM ALIAS (package.json if present)
+###############################################################################
+
+PACKAGE_JSON="$APP_DIR/package.json"
+if [[ -f "$PACKAGE_JSON" ]]; then
+  # Check if jq is available for safe JSON manipulation
+  if command -v jq >/dev/null 2>&1; then
+    log "adding '$LAYER_NAME' script to package.json"
+
+    # Add script using jq
+    tmp_json=$(mktemp)
+    jq --arg name "$LAYER_NAME" --arg path ".$LAYER_NAME/geet.sh" \
+      '.scripts[$name] = $path' \
+      "$PACKAGE_JSON" > "$tmp_json"
+    mv "$tmp_json" "$PACKAGE_JSON"
+
+    log "you can now run: npm run $LAYER_NAME <command>"
+  else
+    log "tip: install jq to auto-add npm scripts"
+    log "or manually add to package.json:"
+    log "  \"scripts\": { \"$LAYER_NAME\": \".$LAYER_NAME/geet.sh\" }"
+  fi
+fi
 
 ###############################################################################
 # FINAL OUTPUT
@@ -304,8 +367,10 @@ log "  layer name: .$LAYER_NAME"
 log "  location:   $NEW_LAYER_DIR"
 log
 log "next steps:"
-log "  1) edit: "
-log "  2) cd $NEW_LAYER_DIR"
-log "  3) stage files: $LAYER_NAME add -A"
-log "  4) commit:      $LAYER_NAME commit -m \"Initial $LAYER_NAME template\""
-log "  5) publish:     push this repo to create a reusable template"
+log "  1) edit: $NEW_LAYER_DIR/.geetinclude"
+log "  2) cd $APP_DIR"
+log "  3) stage files: $GEET_ALIAS add -A"
+log "  4) commit:      $GEET_ALIAS commit -m \"Add the basic template\""
+log "  5) publish:     $GEET_ALIAS publish --public"
+
+}  # end of template()

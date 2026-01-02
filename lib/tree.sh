@@ -1,52 +1,34 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-###############################################################################
 # tree.sh — show what files a layer template includes (and check membership)
+# Usage:
+#   source tree.sh
+#   tree [subcommand] [args...]
 #
-# This script is intentionally NOT a git wrapper.
-# It is a READ-ONLY introspection tool to answer:
-#
+# Read-only introspection tool to answer:
 #   1) "What files are included in this template layer?"
 #   2) "Is this specific file included? Why / why not?"
-#
-# It works per-layer, based on where this script lives:
-#   MyApp/.geet/lib/tree.sh
-#   MyApp/.mytemplate/lib/tree.sh
-#
-###############################################################################
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LAYER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-ROOT="$(cd "$LAYER_DIR/.." && pwd)"
+tree() {
 
-LAYER_NAME="$(basename "$LAYER_DIR")"
-LAYER_NAME="${LAYER_NAME#.}"
-
-DOTGIT="$LAYER_DIR/dot-git"
-geetinclude_SPEC="$LAYER_DIR/.geetinclude"
-EXCLUDE_FILE="$LAYER_DIR/.geetexclude"
-
-die() { echo "[$LAYER_NAME tree] $*" >&2; exit 1; }
-log() { echo "[$LAYER_NAME tree] $*" >&2; }
+# digest-and-locate.sh provides: APP_DIR, TEMPLATE_DIR, DOTGIT, TEMPLATE_NAME,
+# TEMPLATE_GEETINCLUDE, TEMPLATE_GEETEXCLUDE, die, log, debug
 
 ###############################################################################
 # Preconditions
 ###############################################################################
 
 need_dotgit() {
-  [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]] || die "missing $DOTGIT (run: $LAYER_NAME init)"
+  [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]] || die "missing $DOTGIT (run: $GEET_ALIAS init)"
 }
 
 # We rely on compiled excludes existing to ensure the whitelist semantics are
-# actually in effect. The compiler lives in git.sh (single responsibility).
+# actually in effect.
 need_compiled_exclude() {
-  [[ -f "$EXCLUDE_FILE" ]] || die "missing compiled exclude: $EXCLUDE_FILE (run: $LAYER_NAME status)"
+  [[ -f "$TEMPLATE_GEETEXCLUDE" ]] || die "missing compiled exclude: $TEMPLATE_GEETEXCLUDE (run: $GEET_ALIAS sync)"
 }
 
 # Run git in the layer view (read-only usage only)
 git_layer() {
-  GIT_DIR="$DOTGIT" GIT_WORK_TREE="$ROOT" git "$@"
+  GIT_DIR="$DOTGIT" GIT_WORK_TREE="$APP_DIR" git "$@"
 }
 
 ###############################################################################
@@ -101,12 +83,12 @@ print_tree_from_paths() {
 ###############################################################################
 usage() {
   cat <<EOF
-[$LAYER_NAME tree] Show which files are included in this layer template
+[$TEMPLATE_NAME tree] Show which files are included in this layer template
 
 Usage:
-  $LAYER_NAME tree [tracked|all]          # Show tree view (default)
-  $LAYER_NAME tree list [tracked|all]     # List files
-  $LAYER_NAME tree contains <path>        # Check if path is included
+  $GEET_ALIAS tree [tracked|all]          # Show tree view (default)
+  $GEET_ALIAS tree list [tracked|all]     # List files
+  $GEET_ALIAS tree contains <path>        # Check if path is included
 
 Modes:
   tracked  - only files currently tracked by the layer template repo (fast)
@@ -114,8 +96,8 @@ Modes:
 
 Notes:
 - Requires layer gitdir: $DOTGIT
-- Requires compiled exclude: $EXCLUDE_FILE
-  If missing, run: $LAYER_NAME status
+- Requires compiled exclude: $TEMPLATE_GEETEXCLUDE
+  If missing, run: $GEET_ALIAS sync
 EOF
 }
 
@@ -163,7 +145,7 @@ case "$cmd" in
         # layer repo check-ignore rules.
         #
         # Exclude some common heavy dirs to keep it usable; customize as needed.
-        git -C "$ROOT" ls-files -co --exclude-standard \
+        git -C "$APP_DIR" ls-files -co --exclude-standard \
           -- ':!:**/node_modules/**' \
           -- ':!:**/.git/**' \
           -- ':!:**/dot-git/**' \
@@ -177,7 +159,7 @@ case "$cmd" in
             done
         ;;
       *)
-        die "usage: $LAYER_NAME tree list [tracked|all]"
+        die "usage: $GEET_ALIAS tree list [tracked|all]"
         ;;
     esac
     ;;
@@ -192,10 +174,11 @@ case "$cmd" in
         git_layer ls-files | print_tree_from_paths
         ;;
       all)
-        "$SCRIPT_DIR/tree.sh" list all | print_tree_from_paths
+        # Re-invoke tree list all
+        tree list all | print_tree_from_paths
         ;;
       *)
-        die "usage: $LAYER_NAME tree tree [tracked|all]"
+        die "usage: $GEET_ALIAS tree [tracked|all]"
         ;;
     esac
     ;;
@@ -204,15 +187,15 @@ case "$cmd" in
     need_dotgit
     need_compiled_exclude
     p="${1:-}"
-    [[ -n "$p" ]] || die "usage: $LAYER_NAME tree contains <path>"
+    [[ -n "$p" ]] || die "usage: $GEET_ALIAS tree contains <path>"
 
     # If user provides an absolute path inside the repo, convert to relative
-    if [[ "$p" == "$ROOT/"* ]]; then
-      p="${p#"$ROOT/"}"
+    if [[ "$p" == "$APP_DIR/"* ]]; then
+      p="${p#"$APP_DIR/"}"
     fi
 
     # Existence is informative, but not required
-    if [[ ! -e "$ROOT/$p" ]]; then
+    if [[ ! -e "$APP_DIR/$p" ]]; then
       log "note: path does not exist in working tree: $p"
     fi
 
@@ -232,7 +215,7 @@ case "$cmd" in
       tracked="NO"
     fi
 
-    echo "layer: $LAYER_NAME"
+    echo "layer: $TEMPLATE_NAME"
     echo "path:  $p"
     echo "included-by-whitelist: $included"
     echo "tracked-by-template:  $tracked"
@@ -241,19 +224,21 @@ case "$cmd" in
     if [[ "$included" == "YES" && "$tracked" == "NO" ]]; then
       echo
       echo "hint: included but not tracked. Add it with:"
-      echo "  $LAYER_NAME add -- \"$p\""
+      echo "  $GEET_ALIAS add -- \"$p\""
     fi
 
     if [[ "$included" == "NO" ]]; then
       echo
       echo "hint: to include it, add a line to:"
-      echo "  $geetinclude_SPEC"
+      echo "  $TEMPLATE_GEETINCLUDE"
       echo "then regenerate excludes by running:"
-      echo "  $LAYER_NAME status"
+      echo "  $GEET_ALIAS sync"
     fi
     ;;
 
   *)
-    die "unknown command '$cmd' (try: $LAYER_NAME tree help)"
+    die "unknown command '$cmd' (try: $GEET_ALIAS tree help)"
     ;;
 esac
+
+}  # end of tree()

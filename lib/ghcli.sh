@@ -1,28 +1,14 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-###############################################################################
 # ghcli.sh — GitHub CLI integration for geet
-#
-# This script provides GitHub-specific workflows like:
-# - Setting up gh CLI
-# - Creating repos from templates
-# - Managing GitHub-specific template features
-###############################################################################
+# Usage:
+#   source ghcli.sh
+#   ghcli <subcommand> [args...]
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LAYER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-ROOT="$(cd "$LAYER_DIR/.." && pwd)"
+ghcli() {
 
-LAYER_NAME="$(basename "$LAYER_DIR")"
-LAYER_NAME="${LAYER_NAME#.}"
+# digest-and-locate.sh provides: APP_DIR, TEMPLATE_NAME, TEMPLATE_GH_USER,
+# TEMPLATE_GH_NAME, TEMPLATE_GH_URL, GEET_ALIAS, die, log
 
-###############################################################################
-# HELPERS
-###############################################################################
-die() { echo "[$LAYER_NAME gh] $*" >&2; exit 1; }
-log() { echo "[$LAYER_NAME gh] $*" >&2; }
-info() { echo "[$LAYER_NAME gh] $*" >&2; }
+info() { echo "[$TEMPLATE_NAME gh] $*" >&2; }
 
 ###############################################################################
 # CHECKS
@@ -120,10 +106,10 @@ publish_cmd() {
 
   # Get the repo name from the current directory
   local default_repo_name
-  default_repo_name="$(basename "$ROOT")"
+  default_repo_name="$(basename "$APP_DIR")"
 
   log "publishing repository to GitHub..."
-  log "  source: $ROOT"
+  log "  source: $APP_DIR"
   log "  default name: $default_repo_name"
 
   # Build args for gh repo create
@@ -144,7 +130,7 @@ publish_cmd() {
 
   # Run gh repo create from the ROOT directory
   (
-    cd "$ROOT"
+    cd "$APP_DIR"
     gh "${gh_args[@]}"
   )
 
@@ -153,23 +139,23 @@ publish_cmd() {
 
 usage() {
   cat <<EOF
-[$LAYER_NAME gh] GitHub CLI integration
+[$TEMPLATE_NAME gh] GitHub CLI integration
 
 Usage:
-  $LAYER_NAME gh <command> [args...]
+  $GEET_ALIAS gh <command> [args...]
 
 Commands:
   setup      Install and authenticate GitHub CLI (runs automatically if needed)
   publish    Create and push repo to GitHub (defaults: name=dirname, --source=., --push)
-  <any>      Pass through to gh CLI (e.g., 'gh pr list' -> '$LAYER_NAME gh pr list')
+  <any>      Pass through to gh CLI (e.g., 'gh pr list' -> '$GEET_ALIAS gh pr list')
   help       Show this help
 
 Examples:
-  $LAYER_NAME gh publish                    # Auto-setup if needed, then publish
-  $LAYER_NAME gh publish --public
-  $LAYER_NAME gh publish --private --description "My cool project"
-  $LAYER_NAME gh pr list                    # Auto-setup if needed, then list PRs
-  $LAYER_NAME gh repo view
+  $GEET_ALIAS gh publish                    # Auto-setup if needed, then publish
+  $GEET_ALIAS gh publish --public
+  $GEET_ALIAS gh publish --private --description "My cool project"
+  $GEET_ALIAS gh pr list                    # Auto-setup if needed, then list PRs
+  $GEET_ALIAS gh repo view
 
 Note:
   All commands automatically run 'setup' if gh is not installed or authenticated.
@@ -199,6 +185,8 @@ case "$cmd" in
   *)
     # Pass through to gh CLI (auto-setup if needed)
     ensure_gh_ready
-    exec gh "$cmd" "$@"
+    gh "$cmd" "$@"
     ;;
 esac
+
+}  # end of ghcli()

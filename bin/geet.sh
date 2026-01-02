@@ -9,6 +9,7 @@ shift || true
 
 case "$cmd" in
   help|-h|--help)
+    source "$GEET_LIB/help.sh"
     help
     ;;
 
@@ -28,9 +29,14 @@ case "$cmd" in
     tree "$@"
     ;;
 
+  include)
+    source "$GEET_LIB/include.sh"
+    include "$@"
+    ;;
+
   split)
-    source "$GEET_LIB/tree.sh"
-    tree "$@"
+    source "$GEET_LIB/split.sh"
+    split "$@"
     ;;
 
   session)
@@ -51,6 +57,21 @@ case "$cmd" in
   gh)
     source "$GEET_LIB/ghcli.sh"
     ghcli "$@"
+    ;;
+
+  publish)
+    source "$GEET_LIB/ghcli.sh"
+    ghcli publish "$@"
+    ;;
+
+  install)
+    source "$GEET_LIB/git.sh"
+    install "$@"
+    ;;
+
+  clone)
+    source "$GEET_LIB/git.sh"
+    clone "$@"
     ;;
 
   # Explicit escape hatch

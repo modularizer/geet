@@ -1,70 +1,57 @@
-#!/usr/bin/env bash
-set -euo pipefail
+# split.sh — export template files to external folder
+# Usage:
+#   source split.sh
+#   split <dest_dir> [tracked|all]
 
-###############################################################################
-# split.sh — export the layer's template-visible files to an external folder
-#
-# This does NOT change git history. It just copies files.
-#
-# Why this exists:
-# - Sometimes you want a "pure snapshot" of what the template layer includes,
-#   as a standalone directory you can inspect, zip, publish, or compare.
-#
-# Two modes:
-#   tracked (default): export only files currently tracked by the template repo
-#   all:              export any file in the working tree that the whitelist
-#                     includes (even if not yet tracked)
-#
-# Notes:
-# - Requires layer initialization (dot-git exists)
-# - Requires compiled exclude (info/exclude). If missing, run git.sh status.
-###############################################################################
+split() {
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LAYER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-ROOT="$(cd "$LAYER_DIR/.." && pwd)"
-
-LAYER_NAME="$(basename "$LAYER_DIR")"
-LAYER_NAME="${LAYER_NAME#.}"
-
-GIT_SH="$SCRIPT_DIR/git.sh"
-TREE_SH="$SCRIPT_DIR/tree.sh"
-
-DOTGIT="$LAYER_DIR/dot-git"
-EXCLUDE_FILE="$LAYER_DIR/.geetexclude"
-
-die() { echo "[$LAYER_NAME split] $*" >&2; exit 1; }
-log() { echo "[$LAYER_NAME split] $*" >&2; }
-
-need() {
-  [[ -f "$GIT_SH" ]] || die "missing $GIT_SH"
-  [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]] || die "layer not initialized (run: $LAYER_NAME init)"
-  [[ -f "$EXCLUDE_FILE" ]] || die "missing compiled exclude. Run: $LAYER_NAME status"
-}
+# digest-and-locate.sh provides: APP_DIR, TEMPLATE_DIR, DOTGIT, TEMPLATE_NAME,
+# TEMPLATE_GEETEXCLUDE, GEET_LIB, GEET_ALIAS, die, log
 
 usage() {
   cat <<EOF
+$GEET_ALIAS split — export template files to external folder
+
+This creates a clean snapshot of your template files in a separate directory.
+Useful for inspecting, zipping, publishing, or comparing what's included.
+
 Usage:
-  $LAYER_NAME split <dest_dir> [tracked|all]
+  $GEET_ALIAS split <dest_dir> [tracked|all]
 
-Examples:
-  $LAYER_NAME split /tmp/${LAYER_NAME}-export
-  $LAYER_NAME split ../exports/${LAYER_NAME} all
-
-Mode:
-  tracked  Export only files tracked by this template repo (default)
+Modes:
+  tracked  Export only files tracked by template repo (default)
   all      Export all files included by whitelist (may include untracked)
 
-Notes:
-- Destination directory must NOT already exist (safety).
+Examples:
+  $GEET_ALIAS split /tmp/${TEMPLATE_NAME}-export
+  $GEET_ALIAS split ../exports/${TEMPLATE_NAME} all
+  $GEET_ALIAS split --help
+
+Safety:
+  - Destination directory must NOT exist (prevents accidental overwrites)
+  - This does NOT change git history, only copies files
+  - Creates .layer-export-manifest.txt for auditing
+
+Requirements:
+  - Layer must be initialized (dot-git exists)
+  - Whitelist must be compiled (.geetexclude exists)
 EOF
 }
+
+# Handle help
+if [[ "${1:-}" == "help" || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  return 0
+fi
 
 dest="${1:-}"
 mode="${2:-tracked}"
 
-[[ -n "$dest" ]] || { usage; exit 2; }
-need
+[[ -n "$dest" ]] || { usage; return 1; }
+
+# Precondition checks
+[[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]] || die "layer not initialized (run: $GEET_ALIAS init)"
+[[ -f "$TEMPLATE_GEETEXCLUDE" ]] || die "missing compiled exclude. Run: $GEET_ALIAS sync"
 
 # Safety: refuse to export into an existing directory to avoid accidental overwrites.
 if [[ -e "$dest" ]]; then
@@ -79,12 +66,12 @@ trap cleanup EXIT
 case "$mode" in
   tracked)
     # Export what the template repo actually tracks
-    "$GIT_SH" ls-files > "$tmp_list"
+    git --git-dir="$DOTGIT" --work-tree="$APP_DIR" ls-files > "$tmp_list"
     ;;
   all)
     # Export anything the whitelist includes (even if untracked)
-    [[ -f "$TREE_SH" ]] || die "mode 'all' requires $TREE_SH"
-    "$TREE_SH" list all > "$tmp_list"
+    source "$GEET_LIB/tree.sh"
+    tree list all > "$tmp_list"
     ;;
   *)
     die "unknown mode: $mode (use tracked|all)"
@@ -96,7 +83,7 @@ if ! grep -q . "$tmp_list"; then
   die "nothing to export in mode '$mode' (is your whitelist empty?)"
 fi
 
-log "exporting layer '$LAYER_NAME' ($mode) to: $dest"
+log "exporting layer '$TEMPLATE_NAME' ($mode) to: $dest"
 mkdir -p "$dest"
 
 # Copy files preserving paths.
@@ -107,7 +94,7 @@ mkdir -p "$dest"
 #
 # This avoids rsync dependency and avoids writing a bunch of mkdir/cp loops.
 (
-  cd "$ROOT"
+  cd "$APP_DIR"
   # Use null delimiters to safely handle weird filenames
   # Convert line-delimited list to null-delimited for tar
   while IFS= read -r line; do
@@ -118,9 +105,9 @@ mkdir -p "$dest"
 
 # Write a small manifest for auditing
 {
-  echo "layer: $LAYER_NAME"
+  echo "layer: $TEMPLATE_NAME"
   echo "mode: $mode"
-  echo "source_root: $ROOT"
+  echo "source_root: $APP_DIR"
   echo "exported_at: $(date -Is 2>/dev/null || date)"
   echo
   echo "files:"
@@ -129,3 +116,5 @@ mkdir -p "$dest"
 
 log "done"
 log "wrote manifest: $dest/.layer-export-manifest.txt"
+
+}  # end of split()

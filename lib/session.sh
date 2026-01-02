@@ -1,40 +1,48 @@
-#!/usr/bin/env bash
-set -euo pipefail
+# session.sh — run commands in isolated template snapshot
+# Usage:
+#   source session.sh
+#   session run [options] -- <command...>
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LAYER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-ROOT="$(cd "$LAYER_DIR/.." && pwd)"
+session() {
 
-LAYER_NAME="$(basename "$LAYER_DIR")"
-LAYER_NAME="${LAYER_NAME#.}"
-
-SPLIT="$SCRIPT_DIR/split.sh"
-
-die(){ echo "[$LAYER_NAME session] $*" >&2; exit 1; }
-log(){ echo "[$LAYER_NAME session] $*" >&2; }
+# digest-and-locate.sh provides: APP_DIR, TEMPLATE_DIR, TEMPLATE_NAME, GEET_LIB, GEET_ALIAS, die, log
 
 usage() {
   cat <<EOF
+$GEET_ALIAS session — run commands in isolated template snapshot
+
+This creates a temporary isolated copy of just the template files,
+runs your command there, and optionally copies results back.
+
 Usage:
-  $LAYER_NAME session run [options] -- <command...>
+  $GEET_ALIAS session run [options] -- <command...>
 
 Options:
   --mode tracked|all      split mode (default: tracked)
   --tmp <dir>             use a specific temp dir (default: mktemp)
-  --keep                  do not delete temp dir
+  --keep                  do not delete temp dir after command
   --copy-back A:B         copy tmp/A back to repo/B after command
                            (repeatable)
 
+Use cases:
+  - Build template in isolation (avoid polluting app with artifacts)
+  - Test template without app-specific code interfering
+  - Generate files that should live only in the template
+
 Examples:
-  $LAYER_NAME session run -- npm run build
-  $LAYER_NAME session run --mode all -- npm test
-  $LAYER_NAME session run --copy-back dist:dist -- npm run build
-  $LAYER_NAME session run --keep -- npm run build
+  $GEET_ALIAS session run -- npm run build
+  $GEET_ALIAS session run --mode all -- npm test
+  $GEET_ALIAS session run --copy-back dist:dist -- npm run build
+  $GEET_ALIAS session run --keep -- npm run build
 EOF
 }
 
 sub="${1:-help}"; shift || true
-[[ "$sub" == "run" ]] || { usage; exit 2; }
+if [[ "$sub" == "help" || "$sub" == "-h" || "$sub" == "--help" ]]; then
+  usage
+  return 0
+fi
+[[ "$sub" == "run" ]] || { usage; return 1; }
 
 mode="tracked"
 tmp=""
@@ -49,7 +57,7 @@ while [[ $# -gt 0 ]]; do
     --keep) keep=1; shift ;;
     --copy-back) copy_back+=("${2:-}"); shift 2 ;;
     --) shift; break ;;
-    -h|--help) usage; exit 0 ;;
+    -h|--help) usage; return 0 ;;
     *) die "unknown option: $1 (use --help)" ;;
   esac
 done
@@ -58,7 +66,7 @@ done
 
 # Decide temp dir
 if [[ -z "$tmp" ]]; then
-  tmp="$(mktemp -d -t "${LAYER_NAME}-session-XXXXXX")"
+  tmp="$(mktemp -d -t "${TEMPLATE_NAME}-session-XXXXXX")"
 fi
 
 cleanup() {
@@ -71,7 +79,9 @@ cleanup() {
 trap cleanup EXIT
 
 log "splitting ($mode) to: $tmp"
-"$SPLIT" "$tmp" "$mode"
+# Call split function from split.sh
+source "$GEET_LIB/split.sh"
+split "$tmp" "$mode"
 
 log "running in temp dir: $*"
 (
@@ -91,9 +101,11 @@ for spec in "${copy_back[@]}"; do
   fi
 
   log "copying back: $src -> $dst"
-  rm -rf "$ROOT/$dst"
-  mkdir -p "$(dirname "$ROOT/$dst")"
-  cp -a "$tmp/$src" "$ROOT/$dst"
+  rm -rf "$APP_DIR/$dst"
+  mkdir -p "$(dirname "$APP_DIR/$dst")"
+  cp -a "$tmp/$src" "$APP_DIR/$dst"
 done
 
 log "done"
+
+}  # end of session()

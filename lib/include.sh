@@ -1,99 +1,69 @@
-#!/usr/bin/env bash
-set -euo pipefail
+# include.sh — explicitly add files/paths to template whitelist
+# Usage:
+#   source include.sh
+#   include <path> [...]
 
-###############################################################################
-# include.sh — explicitly add files/paths to the layer whitelist (.geetinclude)
-#
-# PURPOSE
-# -------
-# This script exists because:
-# - `git add` should NOT mutate ignore / whitelist rules.
-# - Automatically editing `.geetinclude` during `git add` would be surprising.
-#
-# So we provide an EXPLICIT command:
-#
-#   geet include <path> [...]
-#
-# What it does:
-# 1) Checks whether each path is already INCLUDED by the template layer
-#    (using Git’s ignore engine in template view).
-# 2) If not included, appends a clean rule to `.geetinclude`.
-# 3) Recompiles exclude rules (via git.sh).
-# 4) Optionally stages the file for the template repo.
-#
-# This keeps intent obvious and reviewable.
-###############################################################################
+include() {
 
-###############################################################################
-# PATH DISCOVERY
-###############################################################################
-
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LAYER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-ROOT="$(cd "$LAYER_DIR/.." && pwd)"
-
-LAYER_NAME="$(basename "$LAYER_DIR")"
-LAYER_NAME="${LAYER_NAME#.}"
-
-GIT_SH="$SCRIPT_DIR/git.sh"
-WHITELIST="$LAYER_DIR/.geetinclude"
-
-###############################################################################
-# HELPERS
-###############################################################################
-
-die()  { echo "[$LAYER_NAME include] $*" >&2; exit 1; }
-log()  { echo "[$LAYER_NAME include] $*" >&2; }
-info() { echo "[$LAYER_NAME include] $*" >&2; }
-
-need_files() {
-  [[ -f "$GIT_SH" ]] || die "missing git.sh"
-  [[ -f "$WHITELIST" ]] || die "missing .geetinclude"
-}
+# digest-and-locate.sh provides: APP_DIR, TEMPLATE_GEETINCLUDE, TEMPLATE_NAME,
+# DOTGIT, GEET_LIB, GEET_ALIAS, die, log
 
 usage() {
   cat <<EOF
-Usage:
-  $LAYER_NAME include <path> [...]
+$GEET_ALIAS include — add paths to template whitelist (.geetinclude)
 
-Description:
-  Explicitly adds paths to the template whitelist (.geetinclude).
+PURPOSE:
+  This command exists because 'git add' should NOT mutate whitelist rules.
+  We provide an explicit command to make intent clear and reviewable.
+
+What it does:
+  1. Checks if each path is already included by the template layer
+  2. If not included, appends a clean rule to .geetinclude
+  3. Recompiles exclude rules (auto-syncs)
+  4. Stages the path for the template repo
+
+Usage:
+  $GEET_ALIAS include <path> [...]
 
 Behavior:
-  - If a path is already included, nothing happens.
-  - If a path is ignored by the template view, it is appended to .geetinclude.
-  - The whitelist is recompiled automatically.
-  - The path is then staged for the TEMPLATE repo.
+  - If a path is already included → nothing happens
+  - If a path is ignored → appends to .geetinclude
+  - Whitelist is recompiled automatically
+  - Paths are staged for the TEMPLATE repo (not app repo)
 
 Notes:
-  - Paths are relative to the project root.
-  - Directories are normalized to '<dir>/**'.
+  - Paths are relative to project root
+  - Directories are normalized to '<dir>/**'
 
 Examples:
-  $LAYER_NAME include app/foo.tsx
-  $LAYER_NAME include app/shared
-  $LAYER_NAME include package.json
+  $GEET_ALIAS include app/foo.tsx
+  $GEET_ALIAS include app/shared
+  $GEET_ALIAS include package.json
+  $GEET_ALIAS include --help
 EOF
 }
 
-###############################################################################
-# ARG PARSING
-###############################################################################
+# Handle help
+if [[ "${1:-}" == "help" || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  return 0
+fi
 
-[[ $# -gt 0 ]] || { usage; exit 2; }
-need_files
+[[ $# -gt 0 ]] || { usage; return 1; }
+[[ -f "$TEMPLATE_GEETINCLUDE" ]] || die "missing .geetinclude"
 
 ###############################################################################
 # CORE LOGIC
 ###############################################################################
 
+info() { echo "[$TEMPLATE_NAME include] $*" >&2; }
 changed=0
 
 for raw in "$@"; do
   # Normalize path (strip leading ./)
   path="${raw#./}"
 
-  abs="$ROOT/$path"
+  abs="$APP_DIR/$path"
   [[ -e "$abs" ]] || die "path does not exist: $path"
 
   # Normalize directories → dir/**
@@ -105,7 +75,7 @@ for raw in "$@"; do
   #
   # If git check-ignore says NOTHING, the file is VISIBLE to the template repo,
   # meaning it is already included by existing rules.
-  if "$GIT_SH" check-ignore -q "$path" 2>/dev/null; then
+  if git --git-dir="$DOTGIT" --work-tree="$APP_DIR" -c "core.excludesFile=$TEMPLATE_GEETEXCLUDE" check-ignore -q "$path" 2>/dev/null; then
     # It is ignored → not included → we should add it
     :
   else
@@ -114,13 +84,13 @@ for raw in "$@"; do
   fi
 
   # Avoid duplicate lines (simple exact-match check)
-  if grep -Fxq "$path" "$WHITELIST"; then
+  if grep -Fxq "$path" "$TEMPLATE_GEETINCLUDE"; then
     info "already present in .geetinclude: $path"
     continue
   fi
 
   log "including: $path"
-  echo "$path" >> "$WHITELIST"
+  echo "$path" >> "$TEMPLATE_GEETINCLUDE"
   changed=1
 done
 
@@ -130,15 +100,18 @@ done
 
 if [[ "$changed" -eq 0 ]]; then
   info "no changes needed"
-  exit 0
+  return 0
 fi
 
-# Recompile exclude rules by forcing a cheap git command
-"$GIT_SH" status >/dev/null
+# Recompile exclude rules
+source "$GEET_LIB/sync.sh"
+sync >/dev/null
 
 # Stage whitelist + newly included paths for the TEMPLATE repo
-"$GIT_SH" add .geetinclude "$@"
+git --git-dir="$DOTGIT" --work-tree="$APP_DIR" -c "core.excludesFile=$TEMPLATE_GEETEXCLUDE" add .geetinclude "$@"
 
 log "done"
 log "review .geetinclude, then commit with:"
-log "  $LAYER_NAME commit -m \"Include files in template\""
+log "  $GEET_ALIAS commit -m \"Include files in template\""
+
+}  # end of include()

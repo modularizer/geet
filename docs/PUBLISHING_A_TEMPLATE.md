@@ -1,16 +1,12 @@
 # Publishing a geet template
 
-## Include/Exclude modes
+## Whitelist system
 
-Each template layer defines which files it tracks using **either** a whitelist or blacklist.
+Each template layer defines which files it tracks using a **whitelist** file (`.geetinclude`).
 
-**Choose one (never both):**
-- `.geetinclude` — **Whitelist mode** (only listed files are tracked)
-- `.geetexclude`
+### How it works
 
-### Whitelist mode (`.geetinclude`)
-
-Use when only specific files should be in the template.
+The `.geetinclude` file lists patterns for files to include in the template. This whitelist is compiled into `.geetexclude` (gitignore format) automatically.
 
 **Rules:**
 ```text
@@ -27,28 +23,12 @@ app/custom/shared/**
 package.json
 ```
 
-**Best for:** Component libraries, shared utilities, minimal templates
+**Why whitelist-only?**
+- Makes template boundaries explicit
+- Prevents accidentally including sensitive files
+- Clear separation between template and app-specific code
 
-### Blacklist mode (`.geetexclude`)
-
-Use when most files should be in the template.
-
-**Rules:**
-```text
-path        # exclude this path
-```
-
-**Example:**
-```text
-node_modules/**
-.env
-.env.local
-app/custom/**
-```
-
-**Best for:** Full app templates where only a few paths are app-specific
-
-**Note:** Both files are compiled into Git's repo-local ignore system (`.geetexclude`) automatically.
+**Note:** The `.geetexclude` file is auto-generated - edit `.geetinclude` instead.
 
 ## Creating a post-init hook
 
@@ -164,7 +144,7 @@ Destructive Git commands are blocked by default:
 Override only if you know what you're doing:
 
 ```bash
-geetGIT_DANGEROUS=1 geet git reset --hard
+geet --brave git reset --hard
 ```
 
 ---

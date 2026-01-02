@@ -1,41 +1,58 @@
-#!/usr/bin/env bash
-set -euo pipefail
-
-###############################################################################
 # doctor.sh — sanity checks for this repo + template layers
+# Usage:
+#   source doctor.sh
+#   doctor
 #
-# Goal:
-# - Help humans quickly answer: "Is this repo set up correctly?"
-# - Catch the most common foot-guns (especially committing dot-git/)
-#
-# This script is READ-ONLY:
-# - It does not modify files
-# - It does not run merges/resets/cleans
-#
-# It is layer-aware:
-# - Run it as .geet/lib/doctor.sh or .sk2/lib/doctor.sh
-# - It will check THIS layer and also report other detected layers
-###############################################################################
+# Read-only health checks to catch common setup issues
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LAYER_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-ROOT="$(cd "$LAYER_DIR/.." && pwd)"
+doctor() {
 
-LAYER_NAME="$(basename "$LAYER_DIR")"
-LAYER_NAME="${LAYER_NAME#.}"
+# Show help if requested
+if [[ "${1:-}" == "help" || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  cat <<EOF
+$GEET_ALIAS doctor — run health checks on your geet setup
 
-APP_GIT="$ROOT/.git"
-DOTGIT="$LAYER_DIR/dot-git"
-GIT_SH="$SCRIPT_DIR/git.sh"
-TREE_SH="$SCRIPT_DIR/tree.sh"
-geetinclude="$LAYER_DIR/.geetinclude"
-EXCLUDE_FILE="$LAYER_DIR/.geetexclude"
+Goal:
+  - Help you quickly answer: "Is this repo set up correctly?"
+  - Catch common foot-guns (especially committing dot-git/)
+
+What it checks:
+  ✅ App repo exists (.git)
+  ✅ Layer scripts present (git.sh, init.sh, etc.)
+  ✅ Template git repo exists (dot-git/)
+  ✅ Whitelist files exist (.geetinclude, .geetexclude)
+  ✅ dot-git/ is NOT tracked by app repo (critical!)
+  ✅ Detects other template layers
+
+This is READ-ONLY:
+  - Does not modify any files
+  - Does not run merges/resets/cleans
+  - Safe to run anytime
+
+Usage:
+  $GEET_ALIAS doctor
+
+Exit code:
+  0 - All checks passed
+  1 - One or more issues found
+
+Examples:
+  $GEET_ALIAS doctor  # Run all checks
+EOF
+  return 0
+fi
+
+# digest-and-locate.sh provides: APP_DIR, TEMPLATE_DIR, DOTGIT, TEMPLATE_NAME,
+# TEMPLATE_GEETINCLUDE, TEMPLATE_GEETEXCLUDE, GEET_LIB, die, log, debug
+
+# Additional paths
+APP_GIT="$APP_DIR/.git"
 
 # Pretty printing helpers
-ok()   { echo "[$LAYER_NAME doctor] ✅ $*"; }
-warn() { echo "[$LAYER_NAME doctor] ⚠️  $*" >&2; }
-bad()  { echo "[$LAYER_NAME doctor] ❌ $*" >&2; }
-info() { echo "[$LAYER_NAME doctor]    $*"; }
+ok()   { echo "[$TEMPLATE_NAME doctor] ✅ $*"; }
+warn() { echo "[$TEMPLATE_NAME doctor] ⚠️  $*" >&2; }
+bad()  { echo "[$TEMPLATE_NAME doctor] ❌ $*" >&2; }
+info() { echo "[$TEMPLATE_NAME doctor]    $*"; }
 
 # Track whether we should exit nonzero
 HAS_ERRORS=0
@@ -53,7 +70,7 @@ have() { command -v "$1" >/dev/null 2>&1; }
 detect_layers() {
   # Only look one level deep, and only at hidden dirs.
   # (We intentionally ignore .git and other common dotdirs.)
-  find "$ROOT" -maxdepth 1 -mindepth 1 -type d -name ".*" 2>/dev/null \
+  find "$APP_DIR" -maxdepth 1 -mindepth 1 -type d -name ".*" 2>/dev/null \
     | while IFS= read -r d; do
         base="$(basename "$d")"
         case "$base" in
@@ -69,15 +86,15 @@ detect_layers() {
 # If it is tracked, that's a big red flag for dot-git.
 app_tracks_path() {
   local path="$1"
-  git -C "$ROOT" ls-files --error-unmatch -- "$path" >/dev/null 2>&1
+  git -C "$APP_DIR" ls-files --error-unmatch -- "$path" >/dev/null 2>&1
 }
 
 ###############################################################################
 # Start
 ###############################################################################
 
-info "repo root: $ROOT"
-info "this layer: .$LAYER_NAME"
+info "repo root: $APP_DIR"
+info "this layer: $TEMPLATE_NAME"
 
 echo
 
@@ -91,13 +108,13 @@ else
   fail "app repo missing or invalid: $APP_GIT"
 fi
 
-if [[ -f "$GIT_SH" ]]; then
-  ok "layer git wrapper present: $GIT_SH"
+if [[ -f "$GEET_LIB/git.sh" ]]; then
+  ok "layer git wrapper present: $GEET_LIB/git.sh"
 else
-  fail "missing layer git wrapper: $GIT_SH"
+  fail "missing layer git wrapper: $GEET_LIB/git.sh"
 fi
 
-if [[ -f "$SCRIPT_DIR/init.sh" ]]; then
+if [[ -f "$GEET_LIB/init.sh" ]]; then
   ok "layer init script present"
 else
   fail "missing layer init script"
@@ -130,10 +147,10 @@ fi
 
 # If dot-git exists, make sure compiled exclude exists (after git.sh runs at least once)
 if [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]]; then
-  if [[ -f "$EXCLUDE_FILE" ]]; then
-    ok "compiled exclude present: $EXCLUDE_FILE"
+  if [[ -f "$TEMPLATE_GEETEXCLUDE" ]]; then
+    ok "compiled exclude present: $TEMPLATE_GEETEXCLUDE"
   else
-    warn "compiled exclude missing: $EXCLUDE_FILE"
+    warn "compiled exclude missing: $TEMPLATE_GEETEXCLUDE"
     info "run: $LAYER_NAME status   (this compiles include/exclude rules)"
   fi
 fi
@@ -182,14 +199,14 @@ echo
 # WITHOUT modifying anything.
 
 if [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]]; then
-  if "$GIT_SH" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  if "$GEET_LIB/git.sh" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     ok "layer git wrapper can run git commands"
   else
     fail "layer git wrapper failed to run git (check permissions, env, or dot-git validity)"
   fi
 
   # Check that HEAD resolves
-  if "$GIT_SH" rev-parse HEAD >/dev/null 2>&1; then
+  if "$GEET_LIB/git.sh" rev-parse HEAD >/dev/null 2>&1; then
     ok "layer HEAD resolves"
   else
     warn "layer HEAD does not resolve yet (maybe no commits in layer repo)"
@@ -226,8 +243,10 @@ echo
 ###############################################################################
 if [[ "$HAS_ERRORS" -eq 1 ]]; then
   bad "doctor found errors"
-  exit 2
+  return 1
 fi
 
 ok "doctor looks good"
-exit 0
+return 0
+
+}  # end of doctor()

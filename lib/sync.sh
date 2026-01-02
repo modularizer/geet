@@ -1,4 +1,39 @@
 sync() {
+  # Show help if requested
+  if [[ "${1:-}" == "help" || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+    cat <<EOF
+$GEET_ALIAS sync — compile .geetinclude whitelist into .geetexclude
+
+This command processes your .geetinclude file (whitelist) and compiles it
+into .geetexclude (gitignore-style format) between special markers.
+
+What it does:
+  1. Reads each line from .geetinclude
+  2. Converts whitelist patterns to gitignore format:
+     - 'foo' → '!foo' (include this)
+     - '!foo' → 'foo' (exclude this - removes the !)
+     - '!!foo' → '!foo' (literal ! prefix)
+  3. Inserts compiled rules between GEETINCLUDESTART and GEETINCLUDEEND markers
+  4. Preserves manual rules before/after the markers
+
+Usage:
+  $GEET_ALIAS sync
+
+When to run:
+  - After editing .geetinclude
+  - Before running git commands on the template
+  - Note: Most geet commands auto-sync, so manual sync is rarely needed
+
+File locations:
+  Source:   $TEMPLATE_GEETINCLUDE
+  Output:   $TEMPLATE_GEETEXCLUDE
+
+Examples:
+  $GEET_ALIAS sync  # Compile whitelist rules
+EOF
+    return 0
+  fi
+
   [[ -n "$TEMPLATE_GEETINCLUDE" ]] || return 0
 
   # Markers for the auto-populated section
