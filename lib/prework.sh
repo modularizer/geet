@@ -125,27 +125,6 @@ prework() {
     print_header "DETECTED USER INFO"
     print_var GH_USER "Your GitHub username (from gh CLI or git config)"
 
-    # Logging & filter
-    print_header "LOGGING & FILTER (from logger.sh)"
-    print_var MIN_LOG_LEVEL "Current minimum log level"
-    print_var LOG_FILTER "Active log filter pattern (~ to exclude)"
-    print_var VERBOSE "Set if --verbose flag present"
-    print_var QUIET "Set if --quiet flag present"
-    print_var SILENT "Set if --silent flag present"
-    print_var MIN_LEVEL "Set if --min-level flag present"
-
-    # Flags & guards
-    print_header "FLAGS & GUARDS"
-    print_var BRAVE "Set if --brave flag present (allows dangerous ops)"
-    print_var GEET_DIGESTED "Set to 'true' after prework completes"
-
-    # Timing
-    print_header "TIMING"
-    print_var PREWORK_START_TIME "Prework start time (nanoseconds)"
-    print_var PREWORK_END_TIME "Prework end time (nanoseconds)"
-    print_var PREWORK_ELAPSED_NS "Prework elapsed time (nanoseconds)"
-    print_var PREWORK_ELAPSED_MS "Prework elapsed time (milliseconds)"
-
     # Global user preferences
     print_header "GLOBAL PREFERENCES (from config.env)"
     print_var SHOW_LEVEL "Show log level in output (true/false)"
@@ -159,6 +138,24 @@ prework() {
     print_var DEFAULT_GH_USER "Default GitHub user placeholder"
     print_var DDD_APP_NAME "Default app name for docs"
     print_var DDD_TEMPLATE_NAME "Default template name for docs"
+
+    # Flags & guards
+    print_header "FLAGS & GUARDS"
+    print_var BRAVE "Set if --brave flag present (allows dangerous ops)"
+    print_var GEET_DIGESTED "Set to 'true' after prework completes"
+
+    # Logging & filter
+    print_header "LOGGING & FILTER (from flags)"
+    print_var MIN_LOG_LEVEL "Current minimum log level computed based on --verbose, --quiet, --silent flags"
+    print_var LOG_FILTER "Active log filter pattern (~ to exclude) from --filter flag, e.g. --filter APPLE or --filter ~ORANGE"
+    print_var VERBOSE "Set if --verbose flag present"
+    print_var QUIET "Set if --quiet flag present"
+    print_var SILENT "Set if --silent flag present"
+    print_var MIN_LEVEL "Set if --min-level flag present"
+
+    # Timing
+    print_header "TIMING"
+    print_var PREWORK_ELAPSED_MS "Prework elapsed time (milliseconds)"
 
     printf "\n"
     return 0

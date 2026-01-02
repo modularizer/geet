@@ -30,9 +30,9 @@
 # === DETECTED USER INFO ===
 #   $GH_USER                          # Detected GitHub username (from gh CLI or git config)
 #
-# === LOGGING & FILTER (from logger.sh) ===
-#   $MIN_LOG_LEVEL                    # e.g. "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL", "NEVER"
-#   $LOG_FILTER                       # Filter pattern for log messages (use ~ prefix to invert/exclude)
+# === LOGGING & FILTER (from flags) ===
+#   $MIN_LOG_LEVEL                    # e.g. "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL", "NEVER" computed based on --verbose, --quiet, --silent flags
+#   $LOG_FILTER                       # Filter pattern for log messages (use ~ prefix to invert/exclude)  from --filter flag, e.g. --filter APPLE or --filter ~ORANGE
 #   $VERBOSE                          # Set if --verbose flag present
 #   $QUIET                            # Set if --quiet flag present
 #   $SILENT                           # Set if --silent flag present
@@ -292,7 +292,7 @@ source "$GEET_LIB/extract-flag.sh" --geet-dir TEMPLATE_DIR "$@"
 # FAST PATH: Try to load cached TEMPLATE_DIR from .geet-local.env
 if [[ -z "$TEMPLATE_DIR" ]]; then
   debug "no --geet-dir flag, trying fast path (cached .geet-local.env)"
-  local search_dir="$PWD"
+  search_dir="$PWD"
   while [[ "$search_dir" != "/" ]]; do
     if load_env_file "$search_dir/.geet-local.env"; then
       debug "cache hit: loaded $search_dir/.geet-local.env"
