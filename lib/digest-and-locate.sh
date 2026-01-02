@@ -14,74 +14,52 @@
 #   $TEMPLATE_DIR/.geetexclude           # e.g. MyApp/.mytemplate/.geetexclude
 #   $GEET_GIT              # e.g. MyApp/.mytemplate/geet-git.sh
 #   $TEMPLATE_GEET_CMD              # e.g. MyApp/.mytemplate/geet.sh
-#   $TEMPLATE_NAME                  # e.g. "mytemplate" but read from .../geet-config.json["name"], falls back to TEMPLATE_NAME
-#   $TEMPLATE_DESC                  # e.g. "A cool react native base project example" but read from .../geet-config.json["desc"], falls back to empty
-#   $GEET_ALIAS                     # e.g. "mytemplate" but read from .../geet-config.json["geetAlias"], falls back to "geet"
-#   $TEMPLATE_CONFIG                # e.g. MyApp/.mytemplate/geet-config.json
+#   $TEMPLATE_NAME                  # e.g. "mytemplate" but read from .../config.json["name"], falls back to TEMPLATE_NAME
+#   $TEMPLATE_DESC                  # e.g. "A cool react native base project example" but read from .../config.json["desc"], falls back to empty
+#   $GEET_ALIAS                     # e.g. "mytemplate" but read from .../config.json["geetAlias"], falls back to "geet"
+#   $TEMPLATE_CONFIG                # e.g. MyApp/.mytemplate/config.json
 #   $TEMPLATE_GH_USER               # e.g. <repo-owner>, the template owner's github username
 #   $TEMPLATE_GH_NAME               # e.g. the project name on github, e.g. "mytemplate"
 #   $TEMPLATE_GH_URL                # https://github.com/<repo-owner>/mytemplate
 #   $TEMPLATE_GH_SSH_REMOTE         # # git@github.com:<repo-owner>/mytemplate.git
 #   $TEMPLATE_GH_HTTPS_REMOTE       # https://github.com/<repo-owner>/mytemplate.git
-#   read_config                     # helper function for extracting config values from MyApp/.mytemplate/geet-config.json
+#   read_config                     # helper function for extracting config values from MyApp/.mytemplate/config.json
 #   die
 #   log
 #   debug
 
+# Hard-coded config
+SHOW_LEVEL="true"
+COLOR_MODE="light" # light|dark|none/empty
+COLOR_SCOPE="line" # line|level|empty
+CONFIG_NAME="config.json"
+PATH_TO="/path/to" # could be configurable in the future, used in comments
+
+# hard-coded defaults which get overwritten
+DEFAULT_GEET_ALIAS="geet"
+DEFAULT_GH_USER="<repo-owner>"
+DEFAULT_DEMO_DOC_APP_NAME="MyApp"
+DEFAULT_DEMO_DOC_TEMPLATE_NAME="mytemplate"
+
 # Directory this script lives in (.geet/lib)
 GEET_LIB="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-source "$GEET_LIB/has-flag.sh" --verbose "VERBOSE" "$@"
+
+source "$GEET_LIB/logger.sh"
+MIN_LOG_LEVEL="$(get_specified_level "$@")"
+LOG_FILTER="$(get_log_filter "$@")"
 
 TEMPLATE_NAME=""
-debug() {
-  [[ "$VERBOSE" ]] || return 0
-  if [[ "$TEMPLATE_NAME" ]]; then
-    echo "[$TEMPLATE_NAME] $*" >&2
-  else
-    echo "$*" >&2
-  fi
-  return 0
-}
 debug "VERBOSE MODE ENABLED"
-debug "1:${1:-}"
-debug "2:${2:-}"
-debug "3:${3:-}"
 
-source "$GEET_LIB/has-flag.sh" --quiet "QUIET" "$@"
-debug "QUIET='$QUIET'"
 source "$GEET_LIB/has-flag.sh" --brave "BRAVE" "$@"
 debug "BRAVE='$BRAVE'"
-die() {
-  [[ "$QUIET" ]] && return 1
-  if [[ "$TEMPLATE_NAME" ]]; then
-    echo "[$TEMPLATE_NAME] ERROR: $*" >&2
-  else
-    echo "ERROR: $*" >&2
-  fi
-  return 1
-}
 log_if_brave() {
   if [[ -n "${BRAVE:-}" ]]; then
-    if [[ -n "${QUIET:-}" ]]; then
-      echo "$*" >&2
-    fi
-  else
-    if [[ -n "${VERBOSE:-}" ]]; then
-      echo "$*" >&2
-    fi
+    log "$*"
   fi
   return 0
 }
 
-log() {
-  [[ "$QUIET" ]] && return 0
-  if [[ "$TEMPLATE_NAME" ]]; then
-    echo "[$TEMPLATE_NAME] $*" >&2
-  else
-    echo "$*" >&2
-  fi
-  return 0
-}
 
 brave_guard() {
   local cmd=${1-"an unknown command"}
@@ -95,7 +73,7 @@ brave_guard() {
 }
 
 
-if [[ "${GEET_DIGESTED:-}" ]]; then
+if [[ "${GEET_DIGESTED:-false}" == "true" ]]; then
   debug "already digested"
   return 0
 fi
@@ -103,29 +81,83 @@ debug "digesting input"
 
 
 detect_template_dir_from_cwd() {
-  local best_dir=""
-  local best_lines=-1
+  # We are trying to "find" the template repo from the current directory
+  # unlike standard git repos, where .git lives at the base of the working tree, in geet templates it works differently
+  #
+  # We could have a working tree like this and we might have our cwd at MyApp/ (most common) OR ANYWHERE under MyApp/
+  # The goal is to return the /path/to/.template-b or return empty if we are unable to identify a template dir at any level
+  # there could be 0 to many template dirs, we do not know, only look for the best dir (most .geethier lines) in each level, stop at the closest level with a candidate
+  #
+  # MyApp/
+  #   .git/  <- the app's git repo, NOT what we are looking for, and not guaranteed to exist at all
+  #   .<some-random-hidden-folder>
+  #     a.txt <- but it does not contain .geethier, so it is not a template dir candidate
+  #   .template-a/
+  #     .geethier <- 1 line long
+  #   .template-b/
+  #     .geethier <- 2 lines long
+  #   src/
+  #   app/
+  #   dist/
 
-  # Look at immediate hidden directories only (./.*)
-  for d in .*/ ; do
-    debug "$d"
-    [[ -d "$d" ]] || continue
-    [[ "$d" == "./.git/" ]] && continue
+  local dir="$PWD"
+  locate(){
+    debug "LOCATE: " "$@"
+  }
 
-    local hier="${d}.geethier"   # e.g. ./.mytemplate/.geethier
-    [[ -f "$hier" ]] || continue
+    while :; do
+      locate "checking $dir for template folders..."
+      local best_dir=""
+      local best_lines=-1
 
-    local lines
-    lines="$(wc -l < "$hier" 2>/dev/null || echo 0)"
+      # look at hidden dirs in this level
+      for d in "$dir"/.*; do
+        [[ -d "$d" ]] || continue
+        [[ "$(basename "$d")" == ".git" ]] && continue
+        locate "checking if $d has a .geethier"
 
-    if (( lines > best_lines )); then
-      best_lines="$lines"
-      best_dir="${d%/}"
-    fi
-    debug "found ${d}.geethier with $lines lines"
-  done
-  debug "best dir was $best_dir"
-  printf '%s' "$best_dir"
+        local hier="$d/.geethier"
+        [[ -f "$hier" ]] || continue
+
+        local lines
+        lines="$(wc -l < "$hier" 2>/dev/null || echo 0)"
+
+        if (( lines > 0)); then
+          locate "candidate found at $d with $lines lines"
+        fi
+
+        if (( lines > best_lines )); then
+          locate "candidate at $d is the best so far"
+          best_lines="$lines"
+          best_dir="$d"
+        fi
+      done
+
+      # found a candidate → stop
+      if [[ -n "$best_dir" ]]; then
+        locate "stopping the search since we found atleast one candidate at this level"
+        printf '%s' "$best_dir"
+        return 0
+      fi
+
+      # early exit: this is a git repo root, but no template here
+      if [[ -d "$dir/.git" ]]; then
+        locate "found .git at $dir but no template dir — stopping search"
+        break
+      fi
+
+      # reached filesystem root → stop
+      if [[ "$dir" == "/" ]]; then
+        locate "We walked all the way up to root without finding a template repo"
+        break
+      fi
+
+      # walk up
+      dir="$(dirname "$dir")"
+    done
+
+    # nothing found
+    printf '%s' ""
 }
 
 # Path to the geet wrapper command (in our package)
@@ -145,8 +177,9 @@ else
     return 1
   fi
 fi
-
-debug "unable to locate the geet template directory, try specifying --geet-dir. if you are running certain commands (like geet help, geet template, etc) this is fine..."
+if [[ -z "$TEMPLATE_DIR" ]]; then
+  debug "unable to locate the geet template directory, try specifying --geet-dir. if you are running certain commands (like geet help, geet template, etc) this is fine..."
+fi
 #if [[ -z "$TEMPLATE_DIR" ]]; then
 #  die "unable to locate the geet template directory, try specifying --geet-dir"
 #  return 1
@@ -164,15 +197,16 @@ geet_git () {
 
 
 # Derive repo dir + config path
-TEMPLATE_JSON="$TEMPLATE_DIR/geet-config.json"
+TEMPLATE_JSON="$TEMPLATE_DIR/$CONFIG_NAME"
 if [[ -f "$TEMPLATE_JSON" ]]; then
-  debug "found $TEMPLATE_JSON"
+  debug "found config at $TEMPLATE_JSON"
 else
-  debug "no $TEMPLATE_JSON found"
+  warn "no config found at $TEMPLATE_JSON"
 fi
 
-APP_DIR="$(dirname -- "$TEMPLATE_DIR")"
-APP_NAME="$(basename "$APP_DIR")"
+
+APP_DIR="$(cd "$(dirname -- "$TEMPLATE_DIR")" && pwd -P)"
+APP_NAME="$(basename -- "$APP_DIR")"
 debug "APP_DIR=$APP_DIR"
 # Read a key from the template JSON config.
 # Uses jq; returns default (or empty string) if key missing or null.
@@ -187,19 +221,19 @@ read_config() {
 }
 
 # read config
-GEET_ALIAS="$(read_config geetAlias "geet")"
-TEMPLATE_GH_USER="$(read_config ghUser "repo-owner>")"
+GEET_ALIAS="$(read_config geetAlias "$DEFAULT_GEET_ALIAS")"
+TEMPLATE_GH_USER="$(read_config ghUser "$DEFAULT_GH_USER")"
 TEMPLATE_GH_NAME="$(read_config ghName "$TEMPLATE_NAME")"
 TEMPLATE_NAME="$(read_config name "$TEMPLATE_NAME")"
 TEMPLATE_DESC="$(read_config desc "")"
 TEMPLATE_GH_URL="$(read_config ghURL "https://github.com/$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME")"
 TEMPLATE_GH_SSH_REMOTE="$(read_config ghSSH "git@github.com:$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME.git")"
 TEMPLATE_GH_HTTPS_REMOTE="$(read_config ghHTTPS "$TEMPLATE_GH_URL.git")"
-DEMO_DOC_APP_NAME="$(read_config demoDocAppName "MyApp")"
-DEMO_DOC_TEMPLATE_NAME="$(read_config demoDocTemplateName "mytemplate")"
+DEMO_DOC_APP_NAME="$(read_config demoDocAppName "$DEFAULT_DEMO_DOC_APP_NAME")"
+DEMO_DOC_TEMPLATE_NAME="$(read_config demoDocTemplateName "$DEFAULT_DEMO_DOC_TEMPLATE_NAME")"
 
 # Auto-detect GitHub username
-GH_USER="your-github-username"
+GH_USER="$DEFAULT_GH_USER"
 # Try gh CLI first
 if command -v gh >/dev/null 2>&1; then
   if GH_USER_DETECTED="$(gh api user --jq .login 2>/dev/null)"; then
@@ -210,7 +244,7 @@ if command -v gh >/dev/null 2>&1; then
   fi
 fi
 # Try git config as fallback
-if [[ "$GH_USER" == "your-github-username" ]]; then
+if [[ "$GH_USER" == "$DEFAULT_GH_USER" ]]; then
   if GH_USER_DETECTED="$(git config --get github.user 2>/dev/null)"; then
     if [[ -n "$GH_USER_DETECTED" ]]; then
       GH_USER="$GH_USER_DETECTED"
@@ -219,7 +253,6 @@ if [[ "$GH_USER" == "your-github-username" ]]; then
   fi
 fi
 
-GEET_DIGESTED="true"
-debug "digested!"
 
-debug "cleaned here" "${GEET_ARGS[@]}"
+debug "digested!"
+GEET_DIGESTED="true"

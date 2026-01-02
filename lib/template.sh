@@ -210,8 +210,8 @@ NOTE: this is an auto-generated README so we're just guessing here, but it is li
 EOFREADME
 debug "wrote" "$NEW_LAYER_DIR/README.md"
 
-# Create geet-config.json with defaults
-cat > "$NEW_LAYER_DIR/geet-config.json" <<EOFCONFIG
+# Create config.json with defaults
+cat > "$NEW_LAYER_DIR/$CONFIG_NAME" <<EOFCONFIG
 {
   "name": "$LAYER_NAME",
   "desc": "$NEW_TEMPLATE_DESC",
@@ -236,11 +236,11 @@ cat > "$NEW_LAYER_DIR/geet-config.json" <<EOFCONFIG
   }
 }
 EOFCONFIG
-debug "wrote" "$NEW_LAYER_DIR/geet-config.json"
+debug "wrote" "$NEW_LAYER_DIR/$CONFIG_NAME"
 
 
 
-log "created geet-config.json (edit to set your GitHub info)"
+log "created $CONFIG_NAME"
 
 # Create or copy .geetinclude from base template
 if [[ -f "$TEMPLATE_DIR/.geetinclude" ]]; then
@@ -273,7 +273,7 @@ cat > "$NEW_LAYER_DIR/.geetexclude" <<EOFGEETEXCLUDE
 !.$LAYER_NAME/.geethier
 !.$LAYER_NAME/.geetinclude
 !.$LAYER_NAME/.geetexclude
-!.$LAYER_NAME/geet-config.json
+!.$LAYER_NAME/$CONFIG_NAME
 !.$LAYER_NAME/geet-git.sh
 !.$LAYER_NAME/README.md
 
@@ -309,11 +309,12 @@ EOFGEETEXCLUDE
 cat > "$NEW_LAYER_DIR/geet-git.sh" <<EOFGIT
 #!/usr/bin/env bash
 
-THIS_FILE="\${BASH_SOURCE[0]}"
-THIS_DIR="\$(cd -- "\$(dirname -- "\$THIS_FILE")" && pwd)"
-PARENT_DIR="\$(dirname "\$THIS_DIR")"
+THIS_FILE="\${BASH_SOURCE[0]}" # e.g. $PATH_TO/$APP_NAME/.$LAYER_NAME/geet-git.sh
+THIS_DIR="\$(cd -- "\$(dirname -- "\$THIS_FILE")" && pwd)" # e.g. $PATH_TO/$APP_NAME/.$LAYER_NAME
+PARENT_DIR="\$(dirname "\$THIS_DIR")" # e.g. # e.g. $PATH_TO/$APP_NAME
 
 # this file behaves like git, but always specifies our correct git directory, working tree, and gitignore
+# e.g. exec git --git-dir="$PATH_TO/$APP_NAME/.$LAYER_NAME/dot-git" --work-tree="$PATH_TO/$APP_NAME" -c "core.excludesFile=$PATH_TO/$APP_NAME/.$LAYER_NAME/.geetexclude" "\$@"
 exec git --git-dir="\$THIS_DIR/dot-git" --work-tree="\$PARENT_DIR" -c "core.excludesFile=\$THIS_DIR/.geetexclude" "\$@"
 EOFGIT
 chmod +x "$NEW_LAYER_DIR/geet-git.sh"
@@ -326,8 +327,11 @@ log "created geet.sh wrapper (ensures excludesFile is always applied)"
 cat > "$NEW_LAYER_DIR/geet.sh" <<EOFGEET
 #!/usr/bin/env bash
 # this file behaves like geet, but always specifies our correct template directory, so it can be called from anywhere
-THIS_FILE="\${BASH_SOURCE[0]}"
-THIS_DIR="\$(cd -- "\$(dirname -- "\$THIS_FILE")" && pwd)"
+THIS_FILE="\${BASH_SOURCE[0]}" # e.g. $PATH_TO/$APP_NAME/.$LAYER_NAME/geet.sh
+THIS_DIR="\$(cd -- "\$(dirname -- "\$THIS_FILE")" && pwd)"  # e.g. $PATH_TO/$APP_NAME/.$LAYER_NAME
+
+# now call geet, but tell it the absolute path of the template folder
+# e.g. exec geet --geet-dir "$PATH_TO/$APP_NAME/.$LAYER_NAME" "\$@"
 exec geet --geet-dir "\$THIS_DIR" "\$@"
 EOFGEET
 chmod +x "$NEW_LAYER_DIR/geet.sh"
@@ -377,7 +381,7 @@ geet_git add ".$LAYER_NAME/geet.sh"
 geet_git add ".$LAYER_NAME/.geethier"
 geet_git add ".$LAYER_NAME/.geetinclude"
 geet_git add ".$LAYER_NAME/.geetexclude"
-geet_git add ".$LAYER_NAME/geet-config.json"
+geet_git add ".$LAYER_NAME/$CONFIG_NAME"
 geet_git add ".$LAYER_NAME/geet-git.sh"
 
 debug "added files"
@@ -418,7 +422,7 @@ cp "$GEET_LIB/pre-commit/hook.sh" "$NEW_DOTGIT/hooks/pre-commit"
 chmod +x "$NEW_DOTGIT/hooks/pre-commit"
 log "pre-commit hook created:"
 log "  • Auto-promotes README.md to root"
-log "  • Checks for app-specific patterns (see geet-config.json)"
+log "  • Checks for app-specific patterns (see $CONFIG_NAME)"
 
 # Commit the initial promotion
 git --git-dir="$NEW_DOTGIT" --work-tree="$APP_DIR" commit -m "Promote README.md to root

@@ -1,1 +1,0 @@
-rm -rf "$TEMPLATE_DIR"

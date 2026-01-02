@@ -68,22 +68,12 @@ case "$cmd" in
     install "${GEET_ARGS[@]:1}"
     ;;
 
-  clone)
-    source "$GEET_LIB/git.sh"
-    clone "${GEET_ARGS[@]:1}"
-    ;;
-
-  # Explicit escape hatch
-  git)
-    exec "$GEET_GIT" "${GEET_ARGS[@]:1}"
-    ;;
-
-  soft-detach,soft_detach,slide)
+  soft-detach|soft_detach|slide)
     source "$GEET_LIB/detach.sh"
     soft_detach "${GEET_ARGS[@]:1}"
     ;;
 
-  detach,hard-detach)
+  detach|hard-detach)
     source "$GEET_LIB/detach.sh"
     detach "${GEET_ARGS[@]:1}"
     ;;
@@ -93,7 +83,7 @@ case "$cmd" in
       detached "${GEET_ARGS[@]:1}"
       ;;
 
-  soft-detached,soft_detached,slid)
+  soft-detached|soft_detached|slid)
         source "$GEET_LIB/detach.sh"
         soft_detached "${GEET_ARGS[@]:1}"
         ;;
@@ -103,23 +93,39 @@ case "$cmd" in
       retach "${GEET_ARGS[@]:1}"
       ;;
 
-  precommit,pc)
+  precommit|pc)
     source "$GEET_LIB/pre-commit/hook.sh"
     ;;
 
-  remove,rm,destroy)
-    brave_guard
-    source "$GEET_LIB/remove.sh"
-    retach "${GEET_ARGS[@]:1}"
+  remove|rm)
+    brave_guard "removing the template tracking" "Are you sure you want to call \`rm -rf \"$TEMPLATE_DIR\"\`?"
+    log "You asked for it! Deleting $TEMPLATE_DIR"
+    rm -rf "$TEMPLATE_DIR"
+    log "You have FULLY detached from the template and removed the git tracking of the template repo"
+    log "geet commands will now only work in the generic sense to create or init new projects, but will have no reference of the template repo"
     ;;
 
-  bug,feature,issue,whoops,suggest)
+  destroy)
+    log "You asked for it! Deleting $TEMPLATE_DIR"
+    rm -rf "$TEMPLATE_DIR"
+    log "You have FULLY detached from the template and removed the git tracking of the template repo"
+    log "geet commands will now only work in the generic sense to create or init new projects, but will have no reference of the template repo"
+      ;;
+
+  bug|feature|issue|whoops|suggest)
     source "$GEET_LIB/whoops.sh"
     open_issue "${GEET_ARGS[@]:1}"
     ;;
 
+  # Explicit escape hatch
+  git)
+    source "$GEET_LIB/git.sh"
+    call_cmd "${GEET_ARGS[@]:1}"
+    ;;
+
   # Default: assume git subcommand
   *)
-    exec "$GEET_GIT" "$cmd" "${GEET_ARGS[@]:1}"
+    source "$GEET_LIB/git.sh"
+    call_cmd "${GEET_ARGS[@]}"
     ;;
 esac
