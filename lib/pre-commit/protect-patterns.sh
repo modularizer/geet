@@ -3,20 +3,23 @@
 # PREVENT COMMITTING APP-SPECIFIC CODE
 ###############################################################################
 # Check for patterns that indicate implementation-specific code
+# Configure by adding PREVENT_COMMIT_FILE_PATTERNS and PREVENT_COMMIT_CONTENT_PATTERNS to .geet-template.env
 protect_patterns(){
-  if [[ -f "$TEMPLATE_JSON" ]] && command -v jq >/dev/null 2>&1; then
-    # Read pattern lists from config
-    file_patterns=$(jq -r '.preventCommit.filePatterns[]? // empty' "$TEMPLATE_JSON" 2>/dev/null || true)
-    content_patterns=$(jq -r '.preventCommit.contentPatterns[]? // empty' "$TEMPLATE_JSON" 2>/dev/null || true)
+  # Read patterns from env vars (pipe-delimited)
+  file_patterns="${PREVENT_COMMIT_FILE_PATTERNS:-}"
+  content_patterns="${PREVENT_COMMIT_CONTENT_PATTERNS:-}"
+
+  if [[ -n "$file_patterns" ]] || [[ -n "$content_patterns" ]]; then
 
     errors=()
 
     # Get list of staged files
     staged_files=$(geet_git diff --cached --name-only)
 
-    # Check file patterns
+    # Check file patterns (pipe-delimited)
     if [[ -n "$file_patterns" ]]; then
-      while IFS= read -r pattern; do
+      IFS='|' read -ra patterns <<< "$file_patterns"
+      for pattern in "${patterns[@]}"; do
         [[ -z "$pattern" ]] && continue
         while IFS= read -r file; do
           [[ -z "$file" ]] && continue
@@ -24,12 +27,13 @@ protect_patterns(){
             errors+=("FILE: $file matches pattern: $pattern")
           fi
         done <<< "$staged_files"
-      done <<< "$file_patterns"
+      done
     fi
 
-    # Check content patterns
+    # Check content patterns (pipe-delimited)
     if [[ -n "$content_patterns" ]]; then
-      while IFS= read -r pattern; do
+      IFS='|' read -ra patterns <<< "$content_patterns"
+      for pattern in "${patterns[@]}"; do
         [[ -z "$pattern" ]] && continue
         while IFS= read -r file; do
           [[ -z "$file" ]] && continue
@@ -45,7 +49,7 @@ protect_patterns(){
             done <<< "$matches"
           fi
         done <<< "$staged_files"
-      done <<< "$content_patterns"
+      done
     fi
 
     # If errors found, fail the commit
@@ -59,7 +63,7 @@ protect_patterns(){
       echo "These patterns suggest implementation-specific code that shouldn't be in the template." >&2
       echo >&2
       echo "To bypass this check: $GEET_ALIAS commit --no-verify" >&2
-      echo "To fix: Remove the matched patterns or update $CONFIG" >&2
+      echo "To fix: Remove the matched patterns or update .geet-template.env" >&2
       exit 1
     fi
   fi

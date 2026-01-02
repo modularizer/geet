@@ -18,27 +18,14 @@ geet includes a pre-commit hook that checks for configurable patterns before all
 
 ## Configuration
 
-Patterns are defined in `.mytemplate/geet-config.json`:
+Patterns are defined in `.mytemplate/.geet-template.env` as pipe-delimited strings:
 
-```json
-{
-  "preventCommit": {
-    "filePatterns": [
-      ".*\\.env.*",
-      ".*secret.*",
-      ".*\\.key$",
-      "config/production\\..*"
-    ],
-    "contentPatterns": [
-      "API_KEY=",
-      "SECRET_KEY=",
-      "password:\\s*[\"'].*[\"']",
-      "TODO.*remove.*template",
-      "CUSTOMER_ID=",
-      "stripe_live_key"
-    ]
-  }
-}
+```bash
+# Prevent committing files matching these patterns (pipe-delimited regex)
+PREVENT_COMMIT_FILE_PATTERNS=".*\\.env.*|.*secret.*|.*\\.key$|config/production\\..*"
+
+# Prevent committing content matching these patterns (pipe-delimited regex)
+PREVENT_COMMIT_CONTENT_PATTERNS="API_KEY=|SECRET_KEY=|password:\\s*[\"'].*[\"']|TODO.*remove.*template|CUSTOMER_ID=|stripe_live_key"
 ```
 
 ### Pattern Types
@@ -77,7 +64,7 @@ Patterns are defined in `.mytemplate/geet-config.json`:
 These patterns suggest implementation-specific code that shouldn't be in the template.
 
 To bypass this check: git commit --no-verify
-To fix: Remove the matched patterns or update .mytemplate/geet-config.json
+To fix: Remove the matched patterns or update .mytemplate/.geet-template.env
 ```
 
 ## Bypassing the Check

@@ -102,7 +102,6 @@ prework() {
     print_var DOTGIT "Template's git directory (dot-git)"
     print_var GEET_GIT "Path to geet-git.sh wrapper"
     print_var SOFT_DETACHED "Soft-detached files list"
-    print_var TEMPLATE_JSON "Path to template config.json"
     print_var TEMPLATE_NAME "Template name"
     print_var TEMPLATE_DESC "Template description"
     print_var TEMPLATE_GH_USER "Template owner's GitHub username"
@@ -117,7 +116,7 @@ prework() {
     print_var APP_NAME "Name of your app"
 
     # Config values
-    print_header "CONFIG VALUES (from config.json)"
+    print_header "CONFIG VALUES (from .env files)"
     print_var GEET_ALIAS "Command alias (usually 'geet')"
     print_var DD_APP_NAME "App name used in docs"
     print_var DD_TEMPLATE_NAME "Template name used in docs"
@@ -147,12 +146,14 @@ prework() {
     print_var PREWORK_ELAPSED_NS "Prework elapsed time (nanoseconds)"
     print_var PREWORK_ELAPSED_MS "Prework elapsed time (milliseconds)"
 
-    # Hard-coded settings
-    print_header "HARD-CODED SETTINGS"
+    # Global user preferences
+    print_header "GLOBAL PREFERENCES (from config.env)"
     print_var SHOW_LEVEL "Show log level in output (true/false)"
     print_var COLOR_MODE "Color scheme (light/dark/none)"
     print_var COLOR_SCOPE "Color scope (line/level)"
-    print_var CONFIG_NAME "Config filename (config.json)"
+
+    # Hard-coded constants
+    print_header "HARD-CODED CONSTANTS"
     print_var PATH_TO "Placeholder for docs (/path/to)"
     print_var DEFAULT_GEET_ALIAS "Default command alias"
     print_var DEFAULT_GH_USER "Default GitHub user placeholder"
@@ -177,20 +178,8 @@ prework() {
     return 0
   fi
 
-  # Not found as environment variable, try config.json
-  debug "Not found in environment, checking config.json for key: $key"
-
-  if [[ -f "$TEMPLATE_JSON" ]]; then
-    value="$(read_config "$key" "")"
-    if [[ -n "$value" ]]; then
-      debug "Found $key in config.json: $value"
-      printf '%s\n' "$value"
-      return 0
-    fi
-  fi
-
-  # Not found anywhere
-  debug "$key not found in environment or config"
+  # Not found
+  debug "$key not found in environment"
   printf '<unset>\n'
   return 0
 }

@@ -210,37 +210,73 @@ NOTE: this is an auto-generated README so we're just guessing here, but it is li
 EOFREADME
 debug "wrote" "$NEW_LAYER_DIR/README.md"
 
-# Create config.json with defaults
-cat > "$NEW_LAYER_DIR/$CONFIG_NAME" <<EOFCONFIG
-{
-  "name": "$LAYER_NAME",
-  "desc": "$NEW_TEMPLATE_DESC",
-  "geetAlias": "$GEET_ALIAS",
-  "ghUser": "$GH_USER",
-  "ghName": "$LAYER_NAME",
-  "ghURL": "https://github.com/$GH_USER/$LAYER_NAME",
-  "ghSSH": "git@github.com:$GH_USER/$LAYER_NAME.git",
-  "ghHTTPS": "https://github.com/$GH_USER/$LAYER_NAME.git",
-  "preventCommit": {
-    "filePatterns": [
-      ".*\\\\.env.*",
-      ".*secret.*",
-      ".*\\\\.key$"
-    ],
-    "contentPatterns": [
-      "API_KEY=",
-      "SECRET_KEY=",
-      "password:\\\\s*[\"'].*[\"']",
-      "TODO.*remove.*template"
-    ]
-  }
+# Helper functions to create .env files
+write_global_config() {
+  local target="$GEET_LIB/../config.env"
+  # Only create if it doesn't exist (don't overwrite user preferences)
+  if [[ -f "$target" ]]; then
+    debug "global config already exists at $target, skipping"
+    return 0
+  fi
+
+  cat > "$target" <<'EOF'
+# Geet Global User Preferences
+# This file contains global settings that apply to all geet operations
+# Edit these values to customize your geet experience
+
+SHOW_LEVEL=true
+COLOR_MODE=light
+COLOR_SCOPE=line
+EOF
+  log "created global config at $target"
 }
-EOFCONFIG
-debug "wrote" "$NEW_LAYER_DIR/$CONFIG_NAME"
 
+write_geet_template_env() {
+  local target="$NEW_LAYER_DIR/.geet-template.env"
+  cat > "$target" <<EOF
+# Template configuration
+# Core template identity and settings
+# Edit these values to customize your template
 
+TEMPLATE_NAME=$LAYER_NAME
+TEMPLATE_DESC=$NEW_TEMPLATE_DESC
+GEET_ALIAS=${GEET_ALIAS}
+TEMPLATE_GH_USER=$GH_USER
+TEMPLATE_GH_NAME=$LAYER_NAME
+EOF
+  debug "wrote $target"
+}
 
-log "created $CONFIG_NAME"
+write_geet_metadata_env() {
+  local target="$NEW_LAYER_DIR/.geet-metadata.env"
+  local gh_url="https://github.com/$GH_USER/$LAYER_NAME"
+  cat > "$target" <<EOF
+# Template metadata (auto-generated)
+# Pre-computed values for fast loading
+# Regenerate with 'geet sync --metadata'
+
+TEMPLATE_GH_URL=$gh_url
+TEMPLATE_GH_SSH=git@github.com:$GH_USER/$LAYER_NAME.git
+TEMPLATE_GH_HTTPS=$gh_url.git
+DD_APP_NAME=MyApp
+DD_TEMPLATE_NAME=$LAYER_NAME
+CACHED_GH_USER=$GH_USER
+EOF
+  debug "wrote $target"
+}
+
+# Detect GH_USER lazily (only when needed for template creation)
+if [[ "$GH_USER" == "$DEFAULT_GH_USER" ]] || [[ -z "$GH_USER" ]]; then
+  GH_USER="$(get_gh_user)"
+fi
+
+# Create global config if it doesn't exist
+write_global_config
+
+# Create template .env configuration files
+write_geet_template_env
+write_geet_metadata_env
+log "created template .env configuration files"
 
 # Create or copy .geetinclude from base template
 if [[ -f "$TEMPLATE_DIR/.geetinclude" ]]; then
@@ -273,7 +309,8 @@ cat > "$NEW_LAYER_DIR/.geetexclude" <<EOFGEETEXCLUDE
 !.$LAYER_NAME/.geethier
 !.$LAYER_NAME/.geetinclude
 !.$LAYER_NAME/.geetexclude
-!.$LAYER_NAME/$CONFIG_NAME
+!.$LAYER_NAME/.geet-template.env
+!.$LAYER_NAME/.geet-metadata.env
 !.$LAYER_NAME/geet-git.sh
 !.$LAYER_NAME/README.md
 
@@ -297,9 +334,10 @@ cat > "$NEW_LAYER_DIR/.geetexclude" <<EOFGEETEXCLUDE
 
 #-----------------------------------------------------------------------------------------------------------------------
 # MANDATORY EXCLUDE SECTION (required)
-#    we must never ever commit dot-git folder or its contents
+#    we must never ever commit these files/folders
 #-----------------------------------------------------------------------------------------------------------------------
 **/dot-git/
+**/.geet-local.env
 EOFGEETEXCLUDE
 
 
@@ -381,7 +419,8 @@ geet_git add ".$LAYER_NAME/geet.sh"
 geet_git add ".$LAYER_NAME/.geethier"
 geet_git add ".$LAYER_NAME/.geetinclude"
 geet_git add ".$LAYER_NAME/.geetexclude"
-geet_git add ".$LAYER_NAME/$CONFIG_NAME"
+geet_git add ".$LAYER_NAME/.geet-template.env"
+geet_git add ".$LAYER_NAME/.geet-metadata.env"
 geet_git add ".$LAYER_NAME/geet-git.sh"
 
 debug "added files"
@@ -422,7 +461,7 @@ cp "$GEET_LIB/pre-commit/hook.sh" "$NEW_DOTGIT/hooks/pre-commit"
 chmod +x "$NEW_DOTGIT/hooks/pre-commit"
 log "pre-commit hook created:"
 log "  • Auto-promotes README.md to root"
-log "  • Checks for app-specific patterns (see $CONFIG_NAME)"
+log "  • Checks for app-specific patterns (configure in .geet-template.env)"
 
 # Commit the initial promotion
 git --git-dir="$NEW_DOTGIT" --work-tree="$APP_DIR" commit -m "Promote README.md to root
@@ -469,6 +508,7 @@ fi
 debug "checking " "$APP_DIR/.gitignore"
 touch "$APP_DIR/.gitignore"
 grep -qxF "**/dot-git/" "$APP_DIR/.gitignore" || echo "**/dot-git/" >> "$APP_DIR/.gitignore"
+grep -qxF "**/.geet-local.env" "$APP_DIR/.gitignore" || echo "**/.geet-local.env" >> "$APP_DIR/.gitignore"
 
 
 ###############################################################################

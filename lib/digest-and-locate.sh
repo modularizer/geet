@@ -14,19 +14,18 @@
 #   $DOTGIT                           # e.g. MyApp/.mytemplate/dot-git
 #   $GEET_GIT                         # e.g. MyApp/.mytemplate/geet-git.sh
 #   $SOFT_DETACHED          # e.g. MyApp/.mytemplate/dot-git/info/geet-protected
-#   $TEMPLATE_JSON                    # e.g. MyApp/.mytemplate/config.json
 #
-# === CONFIG VALUES (from config.json) ===
-#   $TEMPLATE_NAME                    # e.g. "mytemplate" from config.json["name"]
-#   $TEMPLATE_DESC                    # e.g. "A cool react native base project example" from config.json["desc"]
-#   $GEET_ALIAS                       # e.g. "mytemplate" from config.json["geetAlias"], defaults to "geet"
+# === CONFIG VALUES (from MyApp/.mytemplate/.geet-template.env and .geet-metadata.env) ===
+#   $TEMPLATE_NAME                    # e.g. "mytemplate" from MyApp/.mytemplate/.geet-template.env
+#   $TEMPLATE_DESC                    # e.g. "A cool react native base project example" from MyApp/.mytemplate/.geet-template.env
+#   $GEET_ALIAS                       # e.g. "mytemplate" from MyApp/.mytemplate/.geet-template.env, defaults to "geet"
 #   $TEMPLATE_GH_USER                 # e.g. <repo-owner>, the template owner's github username
 #   $TEMPLATE_GH_NAME                 # e.g. "mytemplate", the project name on github
 #   $TEMPLATE_GH_URL                  # e.g. https://github.com/<repo-owner>/mytemplate
 #   $TEMPLATE_GH_SSH           # e.g. git@github.com:<repo-owner>/mytemplate.git
 #   $TEMPLATE_GH_HTTPS         # e.g. https://github.com/<repo-owner>/mytemplate.git
-#   $DD_APP_NAME                # e.g. "MyApp" from config.json["demoDocAppName"]
-#   $DD_TEMPLATE_NAME           # e.g. "mytemplate" from config.json["demoDocTemplateName"]
+#   $DD_APP_NAME                # e.g. "MyApp" from MyApp/.mytemplate/.geet-metadata.env
+#   $DD_TEMPLATE_NAME           # e.g. "mytemplate" from MyApp/.mytemplate/.geet-metadata.env
 #
 # === DETECTED USER INFO ===
 #   $GH_USER                          # Detected GitHub username (from gh CLI or git config)
@@ -53,7 +52,6 @@
 #   $SHOW_LEVEL                       # "true" - show log level in output
 #   $COLOR_MODE                       # "light" - color scheme (light|dark|none)
 #   $COLOR_SCOPE                      # "line" - color scope (line|level)
-#   $CONFIG_NAME                      # "config.json" - config filename
 #   $PATH_TO                          # "/path/to" - placeholder for docs
 #   $DEFAULT_GEET_ALIAS               # "geet" - default alias
 #   $DEFAULT_GH_USER                  # "<repo-owner>" - default placeholder
@@ -61,7 +59,7 @@
 #   $DDD_TEMPLATE_NAME   # "mytemplate" - default template name for docs
 #
 # === FUNCTIONS ===
-#   read_config                       # read_config KEY [DEFAULT] - extract values from config.json
+#   read_config                       # read_config KEY [DEFAULT] - get config value by key name
 #   geet_git                          # geet_git [args...] - wrapper for geet-git.sh
 #   detect_template_dir_from_cwd      # auto-detect template directory from current working directory
 #   find_git_root                     # find git root directory (searches upward for .git)
@@ -80,7 +78,6 @@
 SHOW_LEVEL="true"
 COLOR_MODE="light" # light|dark|none/empty
 COLOR_SCOPE="line" # line|level|empty
-CONFIG_NAME="config.json"
 PATH_TO="/path/to" # could be configurable in the future, used in comments
 
 # hard-coded defaults which get overwritten
@@ -118,6 +115,74 @@ brave_guard() {
     local reason=${2:-"Please review the docs to find out why."}
     die "WHOOPS! This action ($cmd) could be dangerous. $reason If you still wish to proceed, re-run with your command with --brave"
   fi
+}
+
+# Fast .env file loader (no external processes, idempotent)
+load_env_file() {
+  local file="$1"
+  [[ ! -f "$file" ]] && return 1
+
+  # Source only if not already loaded (idempotency)
+  local marker_name="LOADED_${file//[^a-zA-Z0-9]/_}"
+  local -n loaded_marker="$marker_name"
+  [[ "$loaded_marker" == "true" ]] && return 0
+
+  # shellcheck disable=SC1090
+  source "$file" 2>/dev/null || return 1
+  loaded_marker="true"
+  debug "loaded env file: $file"
+  return 0
+}
+
+# Write local cache file (system-specific paths)
+write_geet_local_env() {
+  local target="${1:-$TEMPLATE_DIR/.geet-local.env}"
+  [[ -f "$target" ]] && return 0  # Don't overwrite existing
+
+  cat > "$target" <<EOF
+# Geet local configuration (DO NOT COMMIT)
+# System-specific absolute paths and user preferences
+# Auto-generated - edit manually or regenerate with 'geet doctor --fix-cache'
+
+GEET_LIB=$GEET_LIB
+GEET_CMD=$GEET_CMD
+TEMPLATE_DIR=$TEMPLATE_DIR
+APP_DIR=$APP_DIR
+
+# User preference overrides (optional):
+# MIN_LOG_LEVEL=DEBUG
+# COLOR_MODE=dark
+# LOG_FILTER=pattern
+EOF
+  debug "created local cache: $target"
+}
+
+# Lazy GH_USER detection (only call when needed, not in prework)
+get_gh_user() {
+  # Return cached if available
+  [[ -n "${GH_USER:-}" ]] && printf '%s' "$GH_USER" && return 0
+  [[ -n "${CACHED_GH_USER:-}" ]] && printf '%s' "$CACHED_GH_USER" && return 0
+
+  # Expensive detection (200-500ms)
+  debug "detecting GitHub user (this is slow, caching result)..."
+  local detected="$DEFAULT_GH_USER"
+
+  # Try gh CLI first
+  if command -v gh >/dev/null 2>&1; then
+    if detected_gh="$(gh api user --jq .login 2>/dev/null)"; then
+      [[ -n "$detected_gh" ]] && detected="$detected_gh" && debug "detected GH user from gh CLI: $detected"
+    fi
+  fi
+
+  # Fallback to git config
+  if [[ "$detected" == "$DEFAULT_GH_USER" ]]; then
+    if detected_git="$(git config --get github.user 2>/dev/null)"; then
+      [[ -n "$detected_git" ]] && detected="$detected_git" && debug "detected GH user from git config: $detected"
+    fi
+  fi
+
+  GH_USER="$detected"
+  printf '%s' "$GH_USER"
 }
 
 
@@ -213,28 +278,43 @@ detect_template_dir_from_cwd() {
 
 # Path to the geet wrapper command (in our package)
 GEET_CMD="$GEET_LIB/../bin/geet.sh"
-debug "GEET_CMD=$GEET_CMD"
 
+# Load global user preferences from package installation
+GEET_GLOBAL_CONFIG="$GEET_LIB/../config.env"
+if [[ -f "$GEET_GLOBAL_CONFIG" ]]; then
+  load_env_file "$GEET_GLOBAL_CONFIG"
+  debug "loaded global config from $GEET_GLOBAL_CONFIG"
+fi
 
 # Extract --geet-dir <value> from args (mutates caller positional params)
 source "$GEET_LIB/extract-flag.sh" --geet-dir TEMPLATE_DIR "$@"
+
+# FAST PATH: Try to load cached TEMPLATE_DIR from .geet-local.env
 if [[ -z "$TEMPLATE_DIR" ]]; then
-  debug "no --geet-dir received, trying to autodetect"
-  TEMPLATE_DIR="$(detect_template_dir_from_cwd)"
-else
-  debug "received --geet-dir of $TEMPLATE_DIR"
-  if [[ ! -f "$TEMPLATE_DIR/.geethier" ]]; then
-    die "$TEMPLATE_DIR does not contain .geethier"
-    return 1
-  fi
+  debug "no --geet-dir flag, trying fast path (cached .geet-local.env)"
+  local search_dir="$PWD"
+  while [[ "$search_dir" != "/" ]]; do
+    if load_env_file "$search_dir/.geet-local.env"; then
+      debug "cache hit: loaded $search_dir/.geet-local.env"
+      break
+    fi
+    search_dir="$(dirname "$search_dir")"
+  done
 fi
+
+# SLOW PATH: Directory walking (only if cache miss)
+if [[ -z "$TEMPLATE_DIR" ]]; then
+  debug "cache miss - detecting template dir (slow path)"
+  TEMPLATE_DIR="$(detect_template_dir_from_cwd)"
+elif [[ ! -f "$TEMPLATE_DIR/.geethier" ]]; then
+  # Cached path is stale, fall back to detection
+  debug "cached TEMPLATE_DIR is stale, re-detecting"
+  TEMPLATE_DIR="$(detect_template_dir_from_cwd)"
+fi
+
 if [[ -z "$TEMPLATE_DIR" ]]; then
   debug "unable to locate the geet template directory, try specifying --geet-dir. if you are running certain commands (like geet help, geet template, etc) this is fine..."
 fi
-#if [[ -z "$TEMPLATE_DIR" ]]; then
-#  die "unable to locate the geet template directory, try specifying --geet-dir"
-#  return 1
-#fi
 debug "TEMPLATE_DIR=$TEMPLATE_DIR"
 
 # Helper to find git root directory
@@ -252,24 +332,29 @@ find_git_root() {
 
 # Set template-dependent paths (only if TEMPLATE_DIR exists)
 if [[ -n "$TEMPLATE_DIR" ]]; then
+  # Load template .env files in precedence order (lowest to highest)
+  load_env_file "$TEMPLATE_DIR/.geet-template.env"
+  load_env_file "$TEMPLATE_DIR/.geet-metadata.env"
+  load_env_file "$TEMPLATE_DIR/.geet-local.env"  # Highest precedence
+
+  # Derive paths (fast string operations, no external commands)
   DOTGIT="$TEMPLATE_DIR/dot-git"
   GEET_GIT="$TEMPLATE_DIR/geet-git.sh"
   SOFT_DETACHED="$DOTGIT/info/geet-protected"
-  TEMPLATE_JSON="$TEMPLATE_DIR/$CONFIG_NAME"
-  APP_DIR="$(cd "$(dirname -- "$TEMPLATE_DIR")" && pwd -P)"
-  APP_NAME="$(basename -- "$APP_DIR")"
+  APP_DIR="${APP_DIR:-$(cd "$(dirname -- "$TEMPLATE_DIR")" && pwd -P)}"
+  APP_NAME="${APP_NAME:-$(basename -- "$APP_DIR")}"
 
-  if [[ -f "$TEMPLATE_JSON" ]]; then
-    debug "found config at $TEMPLATE_JSON"
-  else
-    warn "no config found at $TEMPLATE_JSON"
+  # Create local cache if missing (one-time cost)
+  if [[ ! -f "$TEMPLATE_DIR/.geet-local.env" ]]; then
+    write_geet_local_env
   fi
+
+  debug "loaded template config from .env files"
   debug "APP_DIR=$APP_DIR"
 else
   DOTGIT=""
   GEET_GIT=""
   SOFT_DETACHED=""
-  TEMPLATE_JSON=""
 
   # Even without a template dir, try to detect APP_DIR from git root
   GIT_ROOT="$(find_git_root)"
@@ -296,60 +381,58 @@ geet_git () {
 
 
 
-# Auto-detect GitHub username
-GH_USER="$DEFAULT_GH_USER"
-# Try gh CLI first
-if command -v gh >/dev/null 2>&1; then
-  if GH_USER_DETECTED="$(gh api user --jq .login 2>/dev/null)"; then
-    if [[ -n "$GH_USER_DETECTED" ]]; then
-      GH_USER="$GH_USER_DETECTED"
-      debug "detected GitHub user from gh CLI: $GH_USER"
-    fi
-  fi
-fi
-# Try git config as fallback
-if [[ "$GH_USER" == "$DEFAULT_GH_USER" ]]; then
-  if GH_USER_DETECTED="$(git config --get github.user 2>/dev/null)"; then
-    if [[ -n "$GH_USER_DETECTED" ]]; then
-      GH_USER="$GH_USER_DETECTED"
-      debug "detected GitHub user from git config: $GH_USER"
-    fi
-  fi
-fi
+# GH_USER: Use cached value from .geet-metadata.env or leave as placeholder
+# Don't auto-detect here (expensive) - use get_gh_user() function when needed
+GH_USER="${CACHED_GH_USER:-$DEFAULT_GH_USER}"
+debug "GH_USER (from cache or default): $GH_USER"
 
-
-
-# Read a key from the template JSON config.
-# Uses jq; returns default (or empty string) if key missing or null.
+# read_config: Get config value by key name
+# Helper function that maps friendly key names to environment variables
 read_config() {
   local key="$1"
   local default="${2-}"
-  if [[ -f "$TEMPLATE_JSON" ]]; then
-    jq -r --arg key "$key" --arg default "$default" '.[$key] // $default' "$TEMPLATE_JSON"
-  else
-    printf "$default"
+
+  # Map friendly key names to env var names
+  local var_name=""
+  case "$key" in
+    name) var_name="TEMPLATE_NAME" ;;
+    desc) var_name="TEMPLATE_DESC" ;;
+    geetAlias) var_name="GEET_ALIAS" ;;
+    ghUser) var_name="TEMPLATE_GH_USER" ;;
+    ghName) var_name="TEMPLATE_GH_NAME" ;;
+    ghURL) var_name="TEMPLATE_GH_URL" ;;
+    ghSSH) var_name="TEMPLATE_GH_SSH" ;;
+    ghHTTPS) var_name="TEMPLATE_GH_HTTPS" ;;
+    demoDocAppName) var_name="DD_APP_NAME" ;;
+    demoDocTemplateName) var_name="DD_TEMPLATE_NAME" ;;
+  esac
+
+  # Return env var if set (from .env files)
+  if [[ -n "$var_name" ]] && [[ -n "${!var_name:-}" ]]; then
+    printf '%s' "${!var_name}"
+    return 0
   fi
+
+  # Return default if not found
+  printf '%s' "$default"
 }
 
-# read config (only if template directory exists)
+# All config values should now be loaded from .env files
+# Set defaults only if not already set (allows .env to override)
 if [[ -n "$TEMPLATE_DIR" ]]; then
-  GEET_ALIAS="$(read_config geetAlias "$DEFAULT_GEET_ALIAS")"
-  TEMPLATE_GH_USER="$(read_config ghUser "$GH_USER")"
-  TEMPLATE_GH_NAME="$(read_config ghName "$TEMPLATE_NAME")"
-  TEMPLATE_NAME="$(read_config name "$TEMPLATE_NAME")"
-  TEMPLATE_DESC="$(read_config desc "")"
-  if [[ -n "$TEMPLATE_GH_NAME" ]]; then
-    TEMPLATE_GH_URL="$(read_config ghURL "https://github.com/$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME")"
-    TEMPLATE_GH_SSH="$(read_config ghSSH "git@github.com:$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME.git")"
-    TEMPLATE_GH_HTTPS="$(read_config ghHTTPS "$TEMPLATE_GH_URL.git")"
-  else
-    TEMPLATE_GH_URL=""
-    TEMPLATE_GH_SSH=""
-    TEMPLATE_GH_HTTPS=""
-  fi
-  DD_APP_NAME="$(read_config demoDocAppName "$DDD_APP_NAME")"
-  DD_TEMPLATE_NAME="$(read_config demoDocTemplateName "$DDD_TEMPLATE_NAME")"
+  GEET_ALIAS="${GEET_ALIAS:-$DEFAULT_GEET_ALIAS}"
+  TEMPLATE_NAME="${TEMPLATE_NAME:-}"
+  TEMPLATE_DESC="${TEMPLATE_DESC:-}"
+  TEMPLATE_GH_USER="${TEMPLATE_GH_USER:-}"
+  TEMPLATE_GH_NAME="${TEMPLATE_GH_NAME:-}"
+  TEMPLATE_GH_URL="${TEMPLATE_GH_URL:-}"
+  TEMPLATE_GH_SSH="${TEMPLATE_GH_SSH:-}"
+  TEMPLATE_GH_HTTPS="${TEMPLATE_GH_HTTPS:-}"
+  DD_APP_NAME="${DD_APP_NAME:-$DDD_APP_NAME}"
+  DD_TEMPLATE_NAME="${DD_TEMPLATE_NAME:-$DDD_TEMPLATE_NAME}"
+  debug "template config loaded (from .env files or defaults)"
 else
+  # No template dir - use defaults
   GEET_ALIAS="$DEFAULT_GEET_ALIAS"
   TEMPLATE_GH_USER=""
   TEMPLATE_GH_NAME=""
