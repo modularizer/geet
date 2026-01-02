@@ -8,6 +8,7 @@
 #   $GEET_CMD                       # e.g. node_modules/geet/bin/geet.sh
 #   $APP_DIR                        # e.g. MyApp/
 #   $TEMPLATE_DIR                   # e.g. MyApp/.mytemplate
+#   $DOTGIT                         # e.g. MyApp/.mytemplate/dot-git
 #   $TEMPLATE_README                # e.g. MyApp/.mytemplate/README.md
 #   $TEMPLATE_GEETINCLUDE           # e.g. MyApp/.mytemplate/.geetinclude
 #   $TEMPLATE_GEETEXCLUDE           # e.g. MyApp/.mytemplate/.geetexclude
@@ -23,8 +24,77 @@
 #   $TEMPLATE_GH_SSH_REMOTE         # # git@github.com:<repo-owner>/mytemplate.git
 #   $TEMPLATE_GH_HTTPS_REMOTE       # https://github.com/<repo-owner>/mytemplate.git
 #   read_config                     # helper function for extracting config values from MyApp/.mytemplate/geet-config.json
+#   die
+#   log
+#   debug
 
-die() { echo "error: $*" >&2; return 1; }  # harmless fallback if caller doesn't provide one
+# Directory this script lives in (.geet/lib)
+GEET_LIB="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$GEET_LIB/extract-flag.sh" --verbose VERBOSE "$@"
+source "$GEET_LIB/extract-flag.sh" --quiet QUIET "$@"
+source "$GEET_LIB/extract-flag.sh" --brave BRAVE "$@"
+
+
+TEMPLATE_NAME=""
+die() {
+  [[ "$QUIET" ]] && return 1
+  if [[ "$TEMPLATE_NAME" ]]; then
+    echo "[$TEMPLATE_NAME] ERROR: $*" >&2
+  else
+    echo "ERROR: $*" >&2
+  fi
+  return 1
+}
+log_if_brave(){
+  if [[ "$BRAVE" ]]; then
+      [[ "$QUIET" ]] && echo "$*" >&2
+    else
+      [[ "$VERBOSE" ]] || echo "ERROR: $*" >&2
+    fi
+  return 0
+}
+log_if_brave "OKAY! DANGER ZONE ..."
+log() {
+  [[ "$QUIET" ]] && return 0
+  if [[ "$TEMPLATE_NAME" ]]; then
+    echo "[$TEMPLATE_NAME] $*" >&2
+  else
+    echo "$*" >&2
+  fi
+  return 0
+}
+
+brave_guard() {
+  local cmd=${1-"an unknown command"}
+  if [[ "$BRAVE" ]]; then
+    log "passed brave_guard for $cmd"
+    return 0
+  else
+    local reason=${2:-"Please review the docs to find out why."}
+    die "WHOOPS! This action ($cmd) could be dangerous. $reason If you still wish to proceed, re-run with your command with --brave"
+  fi
+}
+
+debug() {
+  [[ "$VERBOSE" ]] || return 0
+  if [[ "$TEMPLATE_NAME" ]]; then
+    echo "[$TEMPLATE_NAME] $*" >&2
+  else
+    echo "$*" >&2
+  fi
+  return 0
+}
+
+
+
+
+if [[ "$GEET_DIGESTED" ]]; then
+  debug "already digested"
+  return 0
+fi
+
+debug "digesting input"
+
 
 detect_template_dir_from_cwd() {
   local best_dir=""
@@ -45,33 +115,25 @@ detect_template_dir_from_cwd() {
       best_lines="$lines"
       best_dir="${d%/}"
     fi
+    debug "found ${d}.geethier with $lines lines"
   done
-
+  debug "best dir was $best_dir"
   printf '%s' "$best_dir"
 }
 
-# Directory this script lives in (.geet/lib)
-GEET_LIB="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-
 # Path to the geet wrapper command (in our package)
 GEET_CMD="$GEET_LIB/../bin/geet.sh"
+debug "GEET_CMD=$GEET_CMD"
 
-# Repo dir (defaults to cwd; may be overridden if --geet-dir is provided)
-APP_DIR="$(pwd)"
-
-# Template directory (set via --geet-dir)
-TEMPLATE_DIR=""
-
-# Values loaded from template config
-TEMPLATE_NAME=""
-GEET_ALIAS=""
 
 # Extract --geet-dir <value> from args (mutates caller positional params)
 source "$GEET_LIB/extract-flag.sh" --geet-dir TEMPLATE_DIR "$@"
 
 if [[ -z "$TEMPLATE_DIR" ]]; then
+  debug "no --geet-dir received, trying to autodetect"
   TEMPLATE_DIR="$(detect_template_dir_from_cwd)"
 else
+  debug "received --geet-dir of $TEMPLATE_DIR"
   if [[ ! -f "$TEMPLATE_DIR/.geethier" ]]; then
     die "$TEMPLATE_DIR does not contain .geethier"
     return 1
@@ -82,7 +144,8 @@ if [[ -z "$TEMPLATE_DIR" ]]; then
   die "unable to locate the geet template directory, try specifying --geet-dir"
   return 1
 fi
-DOT_GIT="$TEMPLATE_NAME/dot-git"
+debug "TEMPLATE_DIR=$TEMPLATE_DIR"
+DOTGIT="$TEMPLATE_DIR/dot-git"
 TEMPLATE_README="$TEMPLATE_DIR/README.md"
 TEMPLATE_GEETINCLUDE="$TEMPLATE_DIR/.geetinclude"
 TEMPLATE_GEETEXCLUDE="$TEMPLATE_DIR/.geetexclude"
@@ -92,36 +155,35 @@ TEMPLATE_DIRNAME="$(basename -- "$TEMPLATE_DIR")" # e.g. .mytemplate
 
 # Derive repo dir + config path
 TEMPLATE_JSON="$TEMPLATE_DIR/geet-config.json"
-APP_DIR="$(dirname -- "$TEMPLATE_DIR")"
+if [[ -f "$TEMPLATE_JSON" ]]; then
+  debug "found $TEMPLATE_JSON"
+else
+  debug "no $TEMPLATE_JSON found"
+fi
 
+APP_DIR="$(dirname -- "$TEMPLATE_DIR")"
+debug "APP_DIR=$APP_DIR"
 # Read a key from the template JSON config.
 # Uses jq; returns default (or empty string) if key missing or null.
 read_config() {
   local key="$1"
   local default="${2-}"
-  jq -r --arg key "$key" --arg default "$default" '.[$key] // $default' "$TEMPLATE_JSON"
+  if [[ -f "$TEMPLATE_JSON" ]]; then
+    jq -r --arg key "$key" --arg default "$default" '.[$key] // $default' "$TEMPLATE_JSON"
+  else
+    printf "$default"
+  fi
 }
 
-# Defaults (used if config missing)
-GEET_ALIAS="geet"
-TEMPLATE_GH_USER="<repo-owner>"
-TEMPLATE_GH_NAME="$TEMPLATE_NAME"
-TEMPLATE_DESC=""
+# read config
+GEET_ALIAS="$(read_config geetAlias "geet")"
+TEMPLATE_GH_USER="$(read_config ghUser "repo-owner>")"
+TEMPLATE_GH_NAME="$(read_config ghName "$TEMPLATE_NAME")"
+TEMPLATE_NAME="$(read_config name "$TEMPLATE_NAME")"
+TEMPLATE_DESC="$(read_config desc "")"
+TEMPLATE_GH_URL="$(read_config ghURL "https://github.com/$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME")"
+TEMPLATE_GH_SSH_REMOTE="$(read_config ghSSH "git@github.com:$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME.git")"
+TEMPLATE_GH_HTTPS_REMOTE="$(read_config ghHTTPS "$TEMPLATE_GH_URL.git")"
 
-# Load config only if the JSON file exists
-if [[ -f "$TEMPLATE_JSON" ]]; then
-  TEMPLATE_NAME="$(read_config name "$TEMPLATE_NAME")"
-  TEMPLATE_DESC="$(read_config desc "$TEMPLATE_DESC")"
-  GEET_ALIAS="$(read_config geetAlias "$GEET_ALIAS")"
-  TEMPLATE_GH_USER="$(read_config ghUser "$TEMPLATE_GH_USER")"
-  TEMPLATE_GH_NAME="$(read_config ghName "$TEMPLATE_GH_NAME")"
-fi
-
-TEMPLATE_GH_URL="https://github.com/$TEMPLATE_GH_USER}/${TEMPLATE_GH_NAME}"
-TEMPLATE_GH_SSH_REMOTE="git@github.com:$TEMPLATE_GH_USER}/${TEMPLATE_GH_NAME}.git"
-TEMPLATE_GH_HTTPS_REMOTE="${TEMPLATE_GH_URL}.git"
-if [[ -f "$TEMPLATE_JSON" ]]; then
-  TEMPLATE_GH_URL="$(read_config ghURL "$TEMPLATE_GH_URL")"
-  TEMPLATE_GH_SSH_REMOTE="$(read_config ghSSH "$TEMPLATE_GH_SSH_REMOTE")"
-  TEMPLATE_GH_HTTPS_REMOTE="$(read_config ghHTTPS "$TEMPLATE_GH_HTTPS_REMOTE")"
-fi
+GEET_DIGESTED=1
+debug "digested!"

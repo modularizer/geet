@@ -29,150 +29,8 @@ set -euo pipefail
 ###############################################################################
 source digest-and-locate.sh "$@"
 
-
-###############################################################################
-# TEMPLATE GIT LOCATION (GIT_DIR)
-###############################################################################
-
-# Template repo's Git database directory.
-# This is analogous to .git/ for a normal repo, but layer-scoped.
-DOTGIT="$LAYER_DIR/dot-git"
-
-
-###############################################################################
-# INCLUDE/EXCLUDE SPEC (AUTHOR-FACING)
-###############################################################################
-
-# Templates can use EITHER .geetinclude (whitelist) OR .geetexclude (blacklist).
-# NEVER both.
-#
-# .geetinclude = WHITELIST mode (only listed files are tracked)
-
-GEETINCLUDE_SPEC="$LAYER_DIR/.geetinclude"
-
-# Determine which mode we're in
-SPEC_FILE="$GEETINCLUDE_SPEC"
-SPEC_MODE="include"
-
-# Backwards compatibility
-geetinclude_SPEC="$SPEC_FILE"
-
-###############################################################################
-# COMPILED EXCLUDES (EFFECTIVE)
-###############################################################################
-
-# Git supports repo-local ignore rules via .geetexclude.
-# This affects ONLY the template repo, not the app repo.
-EXCLUDE_FILE="$LAYER_DIR/.geetexclude"
-
-#echo "exclude $EXCLUDE_FILE"
-
-
-gitx() {
-  git \
-    "--git-dir=$DOTGIT" \
-    "--work-tree=$ROOT" \
-    -c "core.excludesFile=$EXCLUDE_FILE" \
-    "$@"
-}
-
-
-###############################################################################
-# OTHER LAYER TOOLS
-###############################################################################
-
-# init.sh is responsible for converting a freshly cloned template repo into:
-# - a captured layer repo in <layer>/dot-git
-# - a new app repo in ./ .git
-INIT_SH="$SCRIPT_DIR/init.sh"
-
-###############################################################################
-# FORCE GIT INTO TEMPLATE MODE
-###############################################################################
-export GIT_DIR="$DOTGIT"
-export GIT_WORK_TREE="$ROOT"
-
-###############################################################################
-# HELPERS
-###############################################################################
-die() { echo "[$LAYER_NAME] $*" >&2; exit 1; }
-log() { echo "[$LAYER_NAME] $*" >&2; }
-
 need_dotgit() {
-  [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]] || die "missing $DOTGIT (run: $LAYER_DIR/lib/init.sh)"
-}
-
-###############################################################################
-# INCLUDE/EXCLUDE COMPILATION
-###############################################################################
-# Compiles .geetinclude into the .geetexclude file between special markers
-sync_exclude() {
-  [[ -n "$SPEC_FILE" ]] || return 0
-
-  mkdir -p "$(dirname "$EXCLUDE_FILE")"
-
-  # Markers for the auto-populated section
-  local START_MARKER="#++++++++++ GEETINCLUDESTART +++++++++++++++++++++"
-  local END_MARKER="#+++++++++ GEETINCLUDEEND ++++++++++++++++++++++++"
-
-  # Generate compiled rules
-  local compiled_rules=""
-  if [[ "$SPEC_MODE" == "include" ]]; then
-    # WHITELIST MODE: Process .geetinclude
-    while IFS= read -r line || [[ -n "$line" ]]; do
-      line="${line#"${line%%[![:space:]]*}"}"
-      line="${line%"${line##*[![:space:]]}"}"
-
-      [[ -z "$line" ]] && continue
-      [[ "$line" == \#* ]] && continue
-
-      if [[ "$line" == "!!"* ]]; then
-        compiled_rules+="!${line#!!}"$'\n'
-      elif [[ "$line" == "!"* ]]; then
-        compiled_rules+="${line#!}"$'\n'
-      else
-        compiled_rules+="!$line"$'\n'
-      fi
-    done < "$SPEC_FILE"
-  fi
-
-  # Read existing .geetexclude or create default structure
-  local before_marker=""
-  local after_marker=""
-
-  if [[ -f "$EXCLUDE_FILE" ]]; then
-    # File exists - extract parts before and after markers
-    local in_marker=0
-    while IFS= read -r line; do
-      if [[ "$line" == "$START_MARKER" ]]; then
-        in_marker=1
-        continue
-      elif [[ "$line" == "$END_MARKER" ]]; then
-        in_marker=2
-        continue
-      fi
-
-      if [[ $in_marker -eq 0 ]]; then
-        before_marker+="$line"$'\n'
-      elif [[ $in_marker -eq 2 ]]; then
-        after_marker+="$line"$'\n'
-      fi
-    done < "$EXCLUDE_FILE"
-  else
-    # File doesn't exist - create default structure
-    before_marker="*"$'\n'"!*/"$'\n'"!.$LAYER_NAME/**"$'\n'".$LAYER_NAME/dot-git/"$'\n'"**/dot-git/"$'\n'$'\n'
-    after_marker=$'\n'"# Add custom ignore rules below this line"$'\n'
-  fi
-
-  # Write new .geetexclude with compiled rules between markers
-  {
-    printf "%s" "$before_marker"
-    echo "$START_MARKER"
-    echo "# Autopopulated from .geetinclude, do not modify"
-    printf "%s" "$compiled_rules"
-    echo "$END_MARKER"
-    printf "%s" "$after_marker"
-  } > "$EXCLUDE_FILE"
+  [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]] || die "missing $DOTGIT (run: $GEET_LIB/init.sh)"
 }
 
 ###############################################################################
@@ -181,9 +39,7 @@ sync_exclude() {
 block_footguns() {
   case "${1-}" in
     clean|reset|checkout|restore|rm)
-      if [[ "${geetGIT_DANGEROUS:-0}" != "1" ]]; then
-        die "blocked '$1' (set geetGIT_DANGEROUS=1 to allow)"
-      fi
+      brave_guard "git $1" "git $1 can be descructive and mess with your app's working directory"
     ;;
   esac
 }

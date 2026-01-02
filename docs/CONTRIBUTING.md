@@ -12,7 +12,7 @@ ls lib/
 
 # Test any script
 bash lib/doctor.sh help
-bash lib/gh.sh help
+bash lib/ghcli.sh help
 ```
 
 ## Project structure

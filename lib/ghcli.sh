@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ###############################################################################
-# gh.sh — GitHub CLI integration for geet
+# ghcli.sh — GitHub CLI integration for geet
 #
 # This script provides GitHub-specific workflows like:
 # - Setting up gh CLI
