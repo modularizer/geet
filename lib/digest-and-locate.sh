@@ -4,29 +4,76 @@
 # Voila! you now have
 # 1. cleaned your args, digesting and removing --geet-dir, moving the value arg to $GEET_TEMPLATE_DIR
 # 2. you have access to the following:
-#   $GEET_LIB                       # e.g. node_modules/geet/lib
-#   $GEET_CMD                       # e.g. node_modules/geet/bin/geet.sh
-#   $APP_DIR                        # e.g. MyApp/
-#   $TEMPLATE_DIR                   # e.g. MyApp/.mytemplate
-#   $DOTGIT                         # e.g. MyApp/.mytemplate/dot-git
-#   $TEMPLATE_README                # e.g. MyApp/.mytemplate/README.md
-#   $TEMPLATE_DIR/.geetinclude           # e.g. MyApp/.mytemplate/.geetinclude
-#   $TEMPLATE_DIR/.geetexclude           # e.g. MyApp/.mytemplate/.geetexclude
-#   $GEET_GIT              # e.g. MyApp/.mytemplate/geet-git.sh
-#   $TEMPLATE_GEET_CMD              # e.g. MyApp/.mytemplate/geet.sh
-#   $TEMPLATE_NAME                  # e.g. "mytemplate" but read from .../config.json["name"], falls back to TEMPLATE_NAME
-#   $TEMPLATE_DESC                  # e.g. "A cool react native base project example" but read from .../config.json["desc"], falls back to empty
-#   $GEET_ALIAS                     # e.g. "mytemplate" but read from .../config.json["geetAlias"], falls back to "geet"
-#   $TEMPLATE_CONFIG                # e.g. MyApp/.mytemplate/config.json
-#   $TEMPLATE_GH_USER               # e.g. <repo-owner>, the template owner's github username
-#   $TEMPLATE_GH_NAME               # e.g. the project name on github, e.g. "mytemplate"
-#   $TEMPLATE_GH_URL                # https://github.com/<repo-owner>/mytemplate
-#   $TEMPLATE_GH_SSH_REMOTE         # # git@github.com:<repo-owner>/mytemplate.git
-#   $TEMPLATE_GH_HTTPS_REMOTE       # https://github.com/<repo-owner>/mytemplate.git
-#   read_config                     # helper function for extracting config values from MyApp/.mytemplate/config.json
-#   die
-#   log
-#   debug
+#
+# === PATHS & DIRECTORIES ===
+#   $GEET_LIB                         # e.g. node_modules/geet/lib
+#   $GEET_CMD                         # e.g. node_modules/geet/bin/geet.sh
+#   $APP_DIR                          # e.g. MyApp/
+#   $APP_NAME                         # e.g. "MyApp"
+#   $TEMPLATE_DIR                     # e.g. MyApp/.mytemplate
+#   $DOTGIT                           # e.g. MyApp/.mytemplate/dot-git
+#   $GEET_GIT                         # e.g. MyApp/.mytemplate/geet-git.sh
+#   $SOFT_DETACHED_FILE_LIST          # e.g. MyApp/.mytemplate/dot-git/info/geet-protected
+#   $TEMPLATE_JSON                    # e.g. MyApp/.mytemplate/config.json
+#
+# === CONFIG VALUES (from config.json) ===
+#   $TEMPLATE_NAME                    # e.g. "mytemplate" from config.json["name"]
+#   $TEMPLATE_DESC                    # e.g. "A cool react native base project example" from config.json["desc"]
+#   $GEET_ALIAS                       # e.g. "mytemplate" from config.json["geetAlias"], defaults to "geet"
+#   $TEMPLATE_GH_USER                 # e.g. <repo-owner>, the template owner's github username
+#   $TEMPLATE_GH_NAME                 # e.g. "mytemplate", the project name on github
+#   $TEMPLATE_GH_URL                  # e.g. https://github.com/<repo-owner>/mytemplate
+#   $TEMPLATE_GH_SSH_REMOTE           # e.g. git@github.com:<repo-owner>/mytemplate.git
+#   $TEMPLATE_GH_HTTPS_REMOTE         # e.g. https://github.com/<repo-owner>/mytemplate.git
+#   $DEMO_DOC_APP_NAME                # e.g. "MyApp" from config.json["demoDocAppName"]
+#   $DEMO_DOC_TEMPLATE_NAME           # e.g. "mytemplate" from config.json["demoDocTemplateName"]
+#
+# === DETECTED USER INFO ===
+#   $GH_USER                          # Detected GitHub username (from gh CLI or git config)
+#
+# === LOGGING & FILTER (from logger.sh) ===
+#   $MIN_LOG_LEVEL                    # e.g. "DEBUG", "INFO", "WARN", "ERROR", "CRITICAL", "NEVER"
+#   $LOG_FILTER                       # Filter pattern for log messages (use ~ prefix to invert/exclude)
+#   $VERBOSE                          # Set if --verbose flag present
+#   $QUIET                            # Set if --quiet flag present
+#   $SILENT                           # Set if --silent flag present
+#   $MIN_LEVEL                        # Set if --min-level flag present
+#
+# === FLAGS & GUARDS ===
+#   $BRAVE                            # Set if --brave flag present (allows dangerous operations)
+#   $GEET_DIGESTED                    # Set to "true" after digest completes (prevents re-digestion)
+#
+# === TIMING ===
+#   $PREWORK_START_TIME               # Prework start time (nanoseconds since epoch)
+#   $PREWORK_END_TIME                 # Prework end time (nanoseconds since epoch)
+#   $PREWORK_ELAPSED_NS               # Prework elapsed time (nanoseconds)
+#   $PREWORK_ELAPSED_MS               # Prework elapsed time (milliseconds)
+#
+# === HARD-CODED SETTINGS ===
+#   $SHOW_LEVEL                       # "true" - show log level in output
+#   $COLOR_MODE                       # "light" - color scheme (light|dark|none)
+#   $COLOR_SCOPE                      # "line" - color scope (line|level)
+#   $CONFIG_NAME                      # "config.json" - config filename
+#   $PATH_TO                          # "/path/to" - placeholder for docs
+#   $DEFAULT_GEET_ALIAS               # "geet" - default alias
+#   $DEFAULT_GH_USER                  # "<repo-owner>" - default placeholder
+#   $DEFAULT_DEMO_DOC_APP_NAME        # "MyApp" - default app name for docs
+#   $DEFAULT_DEMO_DOC_TEMPLATE_NAME   # "mytemplate" - default template name for docs
+#
+# === FUNCTIONS ===
+#   read_config                       # read_config KEY [DEFAULT] - extract values from config.json
+#   geet_git                          # geet_git [args...] - wrapper for geet-git.sh
+#   detect_template_dir_from_cwd      # auto-detect template directory from current working directory
+#   log_if_brave                      # log_if_brave MESSAGE - log only if $BRAVE is set
+#   brave_guard                       # brave_guard CMD [REASON] - exit unless --brave flag present
+#
+# === LOGGING FUNCTIONS (from logger.sh) ===
+#   debug                             # debug MESSAGE - log at DEBUG level
+#   info                              # info MESSAGE - log at INFO level
+#   log                               # log MESSAGE - alias for info
+#   warn                              # warn MESSAGE - log at WARN level
+#   critical                          # critical MESSAGE - log at CRITICAL level
+#   die                               # die MESSAGE - log at CRITICAL and exit 1
 
 # Hard-coded config
 SHOW_LEVEL="true"
@@ -77,6 +124,9 @@ if [[ "${GEET_DIGESTED:-false}" == "true" ]]; then
   debug "already digested"
   return 0
 fi
+
+# Start timing prework
+PREWORK_START_TIME=$(date +%s%N)
 debug "digesting input"
 
 
@@ -197,11 +247,15 @@ geet_git () {
 
 
 # Derive repo dir + config path
-TEMPLATE_JSON="$TEMPLATE_DIR/$CONFIG_NAME"
-if [[ -f "$TEMPLATE_JSON" ]]; then
-  debug "found config at $TEMPLATE_JSON"
+if [[ "$TEMPLATE_DIR" ]]; then
+  TEMPLATE_JSON="$TEMPLATE_DIR/$CONFIG_NAME"
+  if [[ "$TEMPLATE_DIR" ]] && [[ -f "$TEMPLATE_JSON" ]]; then
+    debug "found config at $TEMPLATE_JSON"
+  else
+    warn "no config found at $TEMPLATE_JSON"
+  fi
 else
-  warn "no config found at $TEMPLATE_JSON"
+  TEMPLATE_JSON=""
 fi
 
 
@@ -256,3 +310,9 @@ fi
 
 debug "digested!"
 GEET_DIGESTED="true"
+
+# Calculate and report prework timing
+PREWORK_END_TIME=$(date +%s%N)
+PREWORK_ELAPSED_NS=$((PREWORK_END_TIME - PREWORK_START_TIME))
+PREWORK_ELAPSED_MS=$((PREWORK_ELAPSED_NS / 1000000))
+debug "prework completed in ${PREWORK_ELAPSED_MS}ms"

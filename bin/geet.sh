@@ -53,6 +53,11 @@ case "$cmd" in
     doctor "${GEET_ARGS[@]:1}"
     ;;
 
+  check)
+    source "$GEET_LIB/check.sh"
+    check "${GEET_ARGS[@]:1}"
+    ;;
+
   gh)
     source "$GEET_LIB/ghcli.sh"
     ghcli "${GEET_ARGS[@]:1}"
