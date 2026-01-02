@@ -8,6 +8,7 @@
 #   2) "Is this specific file included? Why / why not?"
 
 tree() {
+  debug "tree"
 
 # digest-and-locate.sh provides: APP_DIR, TEMPLATE_DIR, DOTGIT, TEMPLATE_NAME,
 # TEMPLATE_GEETINCLUDE, TEMPLATE_GEETEXCLUDE, die, log, debug
@@ -103,6 +104,7 @@ EOF
 
 # Parse first argument - could be subcommand or mode
 first_arg="${1:-}"
+debug "first_arg=$first_arg"
 
 # Check if it's a known subcommand
 case "$first_arg" in
@@ -121,6 +123,8 @@ case "$first_arg" in
     cmd="tree"
     ;;
 esac
+
+debug "cmd=$cmd"
 
 case "$cmd" in
   help|-h|--help)
@@ -165,13 +169,17 @@ case "$cmd" in
     ;;
 
   tree)
+    debug "calling tree"
     need_dotgit
+    debug "here"
     need_compiled_exclude
+    debug "okay"
     mode="${1:-tracked}"
+    debug "mode=$mode"
 
     case "$mode" in
       tracked)
-        git_layer ls-files | print_tree_from_paths
+        geet_git ls-files | print_tree_from_paths
         ;;
       all)
         # Re-invoke tree list all

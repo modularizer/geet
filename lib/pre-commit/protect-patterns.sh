@@ -4,10 +4,10 @@
 ###############################################################################
 # Check for patterns that indicate implementation-specific code
 protect_patterns(){
-  if [[ -f "$CONFIG" ]] && command -v jq >/dev/null 2>&1; then
+  if [[ -f "$TEMPLATE_JSON" ]] && command -v jq >/dev/null 2>&1; then
     # Read pattern lists from config
-    file_patterns=$(jq -r '.preventCommit.filePatterns[]? // empty' "$CONFIG" 2>/dev/null || true)
-    content_patterns=$(jq -r '.preventCommit.contentPatterns[]? // empty' "$CONFIG" 2>/dev/null || true)
+    file_patterns=$(jq -r '.preventCommit.filePatterns[]? // empty' "$TEMPLATE_JSON" 2>/dev/null || true)
+    content_patterns=$(jq -r '.preventCommit.contentPatterns[]? // empty' "$TEMPLATE_JSON" 2>/dev/null || true)
 
     errors=()
 

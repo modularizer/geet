@@ -156,7 +156,7 @@ DOTGIT="$TEMPLATE_DIR/dot-git"
 GEET_GIT="$TEMPLATE_DIR/geet-git.sh"
 SOFT_DETACHED_FILE_LIST="$DOTGIT/info/geet-protected"
 geet_git () {
-  log "Calling:" "$GEET_GIT" "$@"
+  debug "Calling:" "$GEET_GIT" "$@"
   "$GEET_GIT" "$@"
   local rc=$?
   return $rc

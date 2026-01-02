@@ -24,7 +24,6 @@ done
 # Set caller variable by name (safe even if unset)
 printf -v "$varname" '%s' "$found"
 
-echo "setting" "${cleaned[@]}"
 # ... build cleaned ...
 GEET_ARGS=("${cleaned[@]}")
 

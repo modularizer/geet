@@ -121,12 +121,15 @@ if [[ "$LAYER_NAME" == "$APP_NAME" ]]; then
   die "template name must be different from app name: '$APP_NAME'"
 fi
 
+NEW_LAYER_DIR="$APP_DIR/.${LAYER_NAME}"
+TEMPLATE_DIR="$NEW_LAYER_DIR"
+
 # Optional description argument
 NEW_TEMPLATE_DESC="${2:-}"
 
 
 
-NEW_LAYER_DIR="$APP_DIR/.${LAYER_NAME}"
+
 debug "new template layer will be created at: $NEW_LAYER_DIR"
 
 
@@ -235,7 +238,7 @@ cat > "$NEW_LAYER_DIR/geet-config.json" <<EOFCONFIG
 EOFCONFIG
 debug "wrote" "$NEW_LAYER_DIR/geet-config.json"
 
-TEMPLATE_DIR="$NEW_LAYER_DIR"
+
 
 log "created geet-config.json (edit to set your GitHub info)"
 
@@ -311,10 +314,7 @@ THIS_DIR="\$(cd -- "\$(dirname -- "\$THIS_FILE")" && pwd)"
 PARENT_DIR="\$(dirname "\$THIS_DIR")"
 
 # this file behaves like git, but always specifies our correct git directory, working tree, and gitignore
-echo "calling"
-echo "thisdir:\$THIS_DIR"
 exec git --git-dir="\$THIS_DIR/dot-git" --work-tree="\$PARENT_DIR" -c "core.excludesFile=\$THIS_DIR/.geetexclude" "\$@"
-echo "called"
 EOFGIT
 chmod +x "$NEW_LAYER_DIR/geet-git.sh"
 GEET_GIT="$NEW_LAYER_DIR/geet-git.sh"
@@ -379,10 +379,11 @@ geet_git add ".$LAYER_NAME/.geetinclude"
 geet_git add ".$LAYER_NAME/.geetexclude"
 geet_git add ".$LAYER_NAME/geet-config.json"
 geet_git add ".$LAYER_NAME/geet-git.sh"
-geet_git add ".$LAYER_NAME/README.md"
+
 debug "added files"
 geet_git commit -m "Initial $LAYER_NAME template"
 log "committed initial files"
+
 ###############################################################################
 # SETUP README PROMOTION
 ###############################################################################
@@ -406,7 +407,7 @@ mkdir -p "$NEW_DOTGIT/info"
 echo "README.md merge=keep-ours" >> "$NEW_DOTGIT/info/attributes"
 
 ###############################################################################
-# SETUP PRE-COMMIT HOOK FOR AUTO-PROMOTION
+# SETUP PRE-COMMIT HOOKS
 ###############################################################################
 # Create pre-commit hook to auto-promote README on future commits
 
@@ -432,6 +433,8 @@ See docs/AUTO_PROMOTE.md for details." 2>/dev/null || true
 log "README.md will appear at root on GitHub"
 log "future edits to .$LAYER_NAME/README.md auto-promote to README.md"
 
+geet_git add ".$LAYER_NAME/README.md"
+geet_git commit -m "Initial readme"
 ###############################################################################
 # SETUP CUSTOM ALIAS (package.json if present)
 ###############################################################################
@@ -456,6 +459,13 @@ if [[ -f "$PACKAGE_JSON" ]]; then
     log "  \"scripts\": { \"$LAYER_NAME\": \".$LAYER_NAME/geet.sh\" }"
   fi
 fi
+
+
+# update the parents gitignore
+debug "checking " "$APP_DIR/.gitignore"
+touch "$APP_DIR/.gitignore"
+grep -qxF "**/dot-git/" "$APP_DIR/.gitignore" || echo "**/dot-git/" >> "$APP_DIR/.gitignore"
+
 
 ###############################################################################
 # FINAL OUTPUT
