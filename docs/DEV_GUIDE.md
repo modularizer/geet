@@ -222,8 +222,8 @@ $GEET_ALIAS                  # Command alias (usually "geet")
 $TEMPLATE_GH_USER            # GitHub username
 $TEMPLATE_GH_NAME            # GitHub repo name
 $TEMPLATE_GH_URL             # GitHub URL
-$TEMPLATE_GH_SSH_REMOTE      # SSH remote URL
-$TEMPLATE_GH_HTTPS_REMOTE    # HTTPS remote URL
+$TEMPLATE_GH_SSH      # SSH remote URL
+$TEMPLATE_GH_HTTPS    # HTTPS remote URL
 ```
 
 ### Flags

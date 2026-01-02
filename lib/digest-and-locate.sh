@@ -13,7 +13,7 @@
 #   $TEMPLATE_DIR                     # e.g. MyApp/.mytemplate
 #   $DOTGIT                           # e.g. MyApp/.mytemplate/dot-git
 #   $GEET_GIT                         # e.g. MyApp/.mytemplate/geet-git.sh
-#   $SOFT_DETACHED_FILE_LIST          # e.g. MyApp/.mytemplate/dot-git/info/geet-protected
+#   $SOFT_DETACHED          # e.g. MyApp/.mytemplate/dot-git/info/geet-protected
 #   $TEMPLATE_JSON                    # e.g. MyApp/.mytemplate/config.json
 #
 # === CONFIG VALUES (from config.json) ===
@@ -23,10 +23,10 @@
 #   $TEMPLATE_GH_USER                 # e.g. <repo-owner>, the template owner's github username
 #   $TEMPLATE_GH_NAME                 # e.g. "mytemplate", the project name on github
 #   $TEMPLATE_GH_URL                  # e.g. https://github.com/<repo-owner>/mytemplate
-#   $TEMPLATE_GH_SSH_REMOTE           # e.g. git@github.com:<repo-owner>/mytemplate.git
-#   $TEMPLATE_GH_HTTPS_REMOTE         # e.g. https://github.com/<repo-owner>/mytemplate.git
-#   $DEMO_DOC_APP_NAME                # e.g. "MyApp" from config.json["demoDocAppName"]
-#   $DEMO_DOC_TEMPLATE_NAME           # e.g. "mytemplate" from config.json["demoDocTemplateName"]
+#   $TEMPLATE_GH_SSH           # e.g. git@github.com:<repo-owner>/mytemplate.git
+#   $TEMPLATE_GH_HTTPS         # e.g. https://github.com/<repo-owner>/mytemplate.git
+#   $DD_APP_NAME                # e.g. "MyApp" from config.json["demoDocAppName"]
+#   $DD_TEMPLATE_NAME           # e.g. "mytemplate" from config.json["demoDocTemplateName"]
 #
 # === DETECTED USER INFO ===
 #   $GH_USER                          # Detected GitHub username (from gh CLI or git config)
@@ -57,8 +57,8 @@
 #   $PATH_TO                          # "/path/to" - placeholder for docs
 #   $DEFAULT_GEET_ALIAS               # "geet" - default alias
 #   $DEFAULT_GH_USER                  # "<repo-owner>" - default placeholder
-#   $DEFAULT_DEMO_DOC_APP_NAME        # "MyApp" - default app name for docs
-#   $DEFAULT_DEMO_DOC_TEMPLATE_NAME   # "mytemplate" - default template name for docs
+#   $DDD_APP_NAME        # "MyApp" - default app name for docs
+#   $DDD_TEMPLATE_NAME   # "mytemplate" - default template name for docs
 #
 # === FUNCTIONS ===
 #   read_config                       # read_config KEY [DEFAULT] - extract values from config.json
@@ -85,8 +85,8 @@ PATH_TO="/path/to" # could be configurable in the future, used in comments
 # hard-coded defaults which get overwritten
 DEFAULT_GEET_ALIAS="geet"
 DEFAULT_GH_USER="<repo-owner>"
-DEFAULT_DEMO_DOC_APP_NAME="MyApp"
-DEFAULT_DEMO_DOC_TEMPLATE_NAME="mytemplate"
+DDD_APP_NAME="MyApp"
+DDD_TEMPLATE_NAME="mytemplate"
 
 # Directory this script lives in (.geet/lib)
 GEET_LIB="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
@@ -237,7 +237,7 @@ fi
 debug "TEMPLATE_DIR=$TEMPLATE_DIR"
 DOTGIT="$TEMPLATE_DIR/dot-git"
 GEET_GIT="$TEMPLATE_DIR/geet-git.sh"
-SOFT_DETACHED_FILE_LIST="$DOTGIT/info/geet-protected"
+SOFT_DETACHED="$DOTGIT/info/geet-protected"
 geet_git () {
   debug "Calling:" "$GEET_GIT" "$@"
   "$GEET_GIT" "$@"
@@ -281,10 +281,10 @@ TEMPLATE_GH_NAME="$(read_config ghName "$TEMPLATE_NAME")"
 TEMPLATE_NAME="$(read_config name "$TEMPLATE_NAME")"
 TEMPLATE_DESC="$(read_config desc "")"
 TEMPLATE_GH_URL="$(read_config ghURL "https://github.com/$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME")"
-TEMPLATE_GH_SSH_REMOTE="$(read_config ghSSH "git@github.com:$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME.git")"
-TEMPLATE_GH_HTTPS_REMOTE="$(read_config ghHTTPS "$TEMPLATE_GH_URL.git")"
-DEMO_DOC_APP_NAME="$(read_config demoDocAppName "$DEFAULT_DEMO_DOC_APP_NAME")"
-DEMO_DOC_TEMPLATE_NAME="$(read_config demoDocTemplateName "$DEFAULT_DEMO_DOC_TEMPLATE_NAME")"
+TEMPLATE_GH_SSH="$(read_config ghSSH "git@github.com:$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME.git")"
+TEMPLATE_GH_HTTPS="$(read_config ghHTTPS "$TEMPLATE_GH_URL.git")"
+DD_APP_NAME="$(read_config demoDocAppName "$DDD_APP_NAME")"
+DD_TEMPLATE_NAME="$(read_config demoDocTemplateName "$DDD_TEMPLATE_NAME")"
 
 # Auto-detect GitHub username
 GH_USER="$DEFAULT_GH_USER"

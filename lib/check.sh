@@ -58,26 +58,42 @@ check() {
         # Comment should start 30 chars after the = sign
         # If value is <= 28 chars, pad to align comment at position 30
         # If value is > 28 chars, just add 2 spaces
+        A=20;
         X=37;
         if (( value_len <= X )); then
           padding=$((X + 2 - value_len))
           spaces=$(printf '%*s' "$padding" '')
-          printf "${key_color}%-30s${reset}${equals_color}=${reset} ${value_color}%s${reset}${spaces}${comment_color}# %s${reset}\n" "$var" "$value" "$desc"
+          printf "${key_color}%-${A}s${reset}${equals_color}=${reset} ${value_color}%s${reset}${spaces}${comment_color}# %s${reset}\n" "$var" "$value" "$desc"
         else
-          printf "${key_color}%-30s${reset}${equals_color}=${reset} ${value_color}%s${reset}  ${comment_color}# %s${reset}\n" "$var" "$value" "$desc"
+          printf "${key_color}%-${A}s${reset}${equals_color}=${reset} ${value_color}%s${reset}  ${comment_color}# %s${reset}\n" "$var" "$value" "$desc"
         fi
       else
         # <unset> is 7 chars, so pad to 30
         padding=$((X + 2 - 7))
         spaces=$(printf '%*s' "$padding" '')
-        printf "${key_color}%-30s${reset}${equals_color}=${reset} ${unset_color}<unset>${reset}${spaces}${comment_color}# %s${reset}\n" "$var" "$desc"
+        printf "${key_color}%-${A}s${reset}${equals_color}=${reset} ${unset_color}<unset>${reset}${spaces}${comment_color}# %s${reset}\n" "$var" "$desc"
       fi
     }
 
     # Helper to print section header
     print_header() {
-      printf "\n${header_color}=== %s ===${reset}\n" "$1"
+      local title="$1"
+      local total=51
+      local left=10
+
+      local right=$(( total - left - ${#title} - 2 ))
+      (( right < 0 )) && right=0
+
+      printf -v lpad '%*s' "$left"  ''
+      printf -v rpad '%*s' "$right" ''
+
+      lpad=${lpad// /==}
+      rpad=${rpad// /=}
+
+      printf "\n${header_color}%s %s %s${reset}\n" "$lpad" "$title" "$rpad"
     }
+
+
 
     # Paths & Directories
     print_header "PATHS & DIRECTORIES"
@@ -88,7 +104,7 @@ check() {
     print_var TEMPLATE_DIR "Template directory (e.g., .mytemplate)"
     print_var DOTGIT "Template's git directory (dot-git)"
     print_var GEET_GIT "Path to geet-git.sh wrapper"
-    print_var SOFT_DETACHED_FILE_LIST "List of soft-detached files"
+    print_var SOFT_DETACHED "List of soft-detached files"
     print_var TEMPLATE_JSON "Path to template config.json"
 
     # Config values
@@ -99,10 +115,10 @@ check() {
     print_var TEMPLATE_GH_USER "Template owner's GitHub username"
     print_var TEMPLATE_GH_NAME "GitHub repository name"
     print_var TEMPLATE_GH_URL "GitHub repository URL"
-    print_var TEMPLATE_GH_SSH_REMOTE "SSH remote URL"
-    print_var TEMPLATE_GH_HTTPS_REMOTE "HTTPS remote URL"
-    print_var DEMO_DOC_APP_NAME "App name used in docs"
-    print_var DEMO_DOC_TEMPLATE_NAME "Template name used in docs"
+    print_var TEMPLATE_GH_SSH "SSH remote URL"
+    print_var TEMPLATE_GH_HTTPS "HTTPS remote URL"
+    print_var DD_APP_NAME "App name used in docs"
+    print_var DD_TEMPLATE_NAME "Template name used in docs"
 
     # Detected user info
     print_header "DETECTED USER INFO"
@@ -138,8 +154,8 @@ check() {
     print_var PATH_TO "Placeholder for docs (/path/to)"
     print_var DEFAULT_GEET_ALIAS "Default command alias"
     print_var DEFAULT_GH_USER "Default GitHub user placeholder"
-    print_var DEFAULT_DEMO_DOC_APP_NAME "Default app name for docs"
-    print_var DEFAULT_DEMO_DOC_TEMPLATE_NAME "Default template name for docs"
+    print_var DDD_APP_NAME "Default app name for docs"
+    print_var DDD_TEMPLATE_NAME "Default template name for docs"
 
     printf "\n"
     return 0

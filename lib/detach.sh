@@ -46,19 +46,19 @@ assert_merge_driver() {
 
 add_protected_pat() {
   local pat="$1"
-  mkdir -p -- "$(dirname -- "$SOFT_DETACHED_FILE_LIST")"
-  touch -- "$SOFT_DETACHED_FILE_LIST"
+  mkdir -p -- "$(dirname -- "$SOFT_DETACHED")"
+  touch -- "$SOFT_DETACHED"
 
   # de-dupe exact line
-  grep -Fxq -- "$pat" "$SOFT_DETACHED_FILE_LIST" || echo "$pat" >> "$SOFT_DETACHED_FILE_LIST"
+  grep -Fxq -- "$pat" "$SOFT_DETACHED" || echo "$pat" >> "$SOFT_DETACHED"
 }
 remove_protected_pat() {
   local pat="$1"
-  [[ -f "$SOFT_DETACHED_FILE_LIST" ]] || return 0
+  [[ -f "$SOFT_DETACHED" ]] || return 0
 
   local tmp
   tmp="$(mktemp)"
-  grep -Fxv -- "$pat" "$SOFT_DETACHED_FILE_LIST" > "$tmp" && mv -- "$tmp" "$SOFT_DETACHED_FILE_LIST"
+  grep -Fxv -- "$pat" "$SOFT_DETACHED" > "$tmp" && mv -- "$tmp" "$SOFT_DETACHED"
 }
 
 # ---- attributes-based "keep ours" (your original detach/retach core) ----

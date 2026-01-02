@@ -87,13 +87,13 @@ Requirements:
   - <name> cannot contain spaces
 
 What this creates:
-  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/         (new layer directory)
-  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/dot-git/  (template's git repository)
-  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/geet-git.sh  (git wrapper for template repo)
-  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/geet.sh      (geet wrapper for template)
-  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/.geetinclude (whitelist of files to include)
-  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/.geetexclude (compiled excludes)
-  - $DEMO_DOC_APP_NAME/$DEMO_DOC_TEMPLATE_NAME/README.md    (template documentation)
+  - $DD_APP_NAME/$DD_TEMPLATE_NAME/         (new layer directory)
+  - $DD_APP_NAME/$DD_TEMPLATE_NAME/dot-git/  (template's git repository)
+  - $DD_APP_NAME/$DD_TEMPLATE_NAME/geet-git.sh  (git wrapper for template repo)
+  - $DD_APP_NAME/$DD_TEMPLATE_NAME/geet.sh      (geet wrapper for template)
+  - $DD_APP_NAME/$DD_TEMPLATE_NAME/.geetinclude (whitelist of files to include)
+  - $DD_APP_NAME/$DD_TEMPLATE_NAME/.geetexclude (compiled excludes)
+  - $DD_APP_NAME/$DD_TEMPLATE_NAME/README.md    (template documentation)
 EOF
   return 0
 fi

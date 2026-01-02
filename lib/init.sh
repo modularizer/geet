@@ -37,10 +37,10 @@ Arguments:
                   (if .geet/post-init.sh exists and is executable)
 
 Key Idea (two repos, one working tree):
-  - App repo:       $DEMO_DOC_APP_NAME/.git              (your normal development)
-  - Template layer: $DEMO_DOC_APP_NAME/.geet/dot-git     (tracks whitelisted files only)
+  - App repo:       $DD_APP_NAME/.git              (your normal development)
+  - Template layer: $DD_APP_NAME/.geet/dot-git     (tracks whitelisted files only)
 
-  Both repos share the same working tree ($DEMO_DOC_APP_NAME/), but have separate gitdirs.
+  Both repos share the same working tree ($DD_APP_NAME/), but have separate gitdirs.
 
 Idempotency:
   - If already initialized, prints status and exits successfully
