@@ -7,32 +7,40 @@
 #   source extract-flag.sh --template-dir TEMPLATE_DIR "$@"
 #
 # Effects:
-#   - Sets $TEMPLATE_DIR to the extracted value (empty if not present)
-#   - Removes --template-dir and its value from "$@"
-#   - Mutates caller's positional parameters
-#   - if FLAG_NAME is specified multiple times in "$@" then all get removed, and the last one wins, gets set to VAR_NAME
+#   - Sets VAR_NAME to the extracted value ("" if not present)
+#   - Removes FLAG_NAME and its value from "$@"
+#   - If FLAG_NAME appears multiple times, all are removed; last one wins
 
-extract_flag() {
-  local flag="$1"
-  local -n out_var="$2"
-  shift 2
+flag="$1"
+varname="$2"
+shift 2
 
-  local cleaned=()
-  local value=""
+cleaned=()
+value=""
 
-  while [ "$#" -gt 0 ]; do
-    if [ "$1" = "$flag" ] && [ "$#" -gt 1 ]; then
+while (( $# > 0 )); do
+  if [[ "$1" == "$flag" ]]; then
+    # If flag has a value, consume it; if it's missing, just drop the flag
+    if (( $# > 1 )); then
       value="$2"
       shift 2
+      continue
     else
-      cleaned+=("$1")
       shift
+      continue
     fi
-  done
+  fi
 
-  out_var="$value"
-  set -- "${cleaned[@]}"
-}
+  cleaned+=("$1")
+  shift
+done
 
-extract_flag "$@"
+# Set caller variable by name (safe even if previously unset)
+printf -v "$varname" '%s' "$value"
+GEET_ARGS=("${cleaned[@]}")
 
+# Mutate caller positional params (because this file is sourced)
+set -- "${GEET_ARGS[@]}"
+
+
+unset flag varname cleaned value

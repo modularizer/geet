@@ -30,12 +30,27 @@
 
 # Directory this script lives in (.geet/lib)
 GEET_LIB="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-source "$GEET_LIB/extract-flag.sh" --verbose VERBOSE "$@"
-source "$GEET_LIB/extract-flag.sh" --quiet QUIET "$@"
-source "$GEET_LIB/extract-flag.sh" --brave BRAVE "$@"
-
+source "$GEET_LIB/has-flag.sh" --verbose "VERBOSE" "$@"
 
 TEMPLATE_NAME=""
+debug() {
+  [[ "$VERBOSE" ]] || return 0
+  if [[ "$TEMPLATE_NAME" ]]; then
+    echo "[$TEMPLATE_NAME] $*" >&2
+  else
+    echo "$*" >&2
+  fi
+  return 0
+}
+debug "VERBOSE MODE ENABLED"
+debug "1:${1:-}"
+debug "2:${2:-}"
+debug "3:${3:-}"
+
+source "$GEET_LIB/has-flag.sh" --quiet "QUIET" "$@"
+debug "QUIET='$QUIET'"
+source "$GEET_LIB/has-flag.sh" --brave "BRAVE" "$@"
+debug "BRAVE='$BRAVE'"
 die() {
   [[ "$QUIET" ]] && return 1
   if [[ "$TEMPLATE_NAME" ]]; then
@@ -45,15 +60,19 @@ die() {
   fi
   return 1
 }
-log_if_brave(){
-  if [[ "$BRAVE" ]]; then
-      [[ "$QUIET" ]] && echo "$*" >&2
-    else
-      [[ "$VERBOSE" ]] || echo "ERROR: $*" >&2
+log_if_brave() {
+  if [[ -n "${BRAVE:-}" ]]; then
+    if [[ -n "${QUIET:-}" ]]; then
+      echo "$*" >&2
     fi
+  else
+    if [[ -n "${VERBOSE:-}" ]]; then
+      echo "$*" >&2
+    fi
+  fi
   return 0
 }
-log_if_brave "OKAY! DANGER ZONE ..."
+
 log() {
   [[ "$QUIET" ]] && return 0
   if [[ "$TEMPLATE_NAME" ]]; then
@@ -75,24 +94,11 @@ brave_guard() {
   fi
 }
 
-debug() {
-  [[ "$VERBOSE" ]] || return 0
-  if [[ "$TEMPLATE_NAME" ]]; then
-    echo "[$TEMPLATE_NAME] $*" >&2
-  else
-    echo "$*" >&2
-  fi
-  return 0
-}
 
-
-
-
-if [[ "$GEET_DIGESTED" ]]; then
+if [[ "${GEET_DIGESTED:-}" ]]; then
   debug "already digested"
   return 0
 fi
-
 debug "digesting input"
 
 
@@ -102,6 +108,7 @@ detect_template_dir_from_cwd() {
 
   # Look at immediate hidden directories only (./.*)
   for d in .*/ ; do
+    debug "$d"
     [[ -d "$d" ]] || continue
     [[ "$d" == "./.git/" ]] && continue
 
@@ -128,7 +135,6 @@ debug "GEET_CMD=$GEET_CMD"
 
 # Extract --geet-dir <value> from args (mutates caller positional params)
 source "$GEET_LIB/extract-flag.sh" --geet-dir TEMPLATE_DIR "$@"
-
 if [[ -z "$TEMPLATE_DIR" ]]; then
   debug "no --geet-dir received, trying to autodetect"
   TEMPLATE_DIR="$(detect_template_dir_from_cwd)"
@@ -140,10 +146,11 @@ else
   fi
 fi
 
-if [[ -z "$TEMPLATE_DIR" ]]; then
-  die "unable to locate the geet template directory, try specifying --geet-dir"
-  return 1
-fi
+debug "unable to locate the geet template directory, try specifying --geet-dir. if you are running certain commands (like geet help, geet template, etc) this is fine..."
+#if [[ -z "$TEMPLATE_DIR" ]]; then
+#  die "unable to locate the geet template directory, try specifying --geet-dir"
+#  return 1
+#fi
 debug "TEMPLATE_DIR=$TEMPLATE_DIR"
 DOTGIT="$TEMPLATE_DIR/dot-git"
 TEMPLATE_README="$TEMPLATE_DIR/README.md"
@@ -213,5 +220,7 @@ if [[ "$GH_USER" == "your-github-username" ]]; then
   fi
 fi
 
-GEET_DIGESTED=1
+GEET_DIGESTED="true"
 debug "digested!"
+
+debug "cleaned here" "${GEET_ARGS[@]}"

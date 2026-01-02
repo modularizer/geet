@@ -8,7 +8,6 @@
   "files": [
     "bin/",
     "lib/",
-    "geetinclude.sample",
     "README.md",
     "docs/"
   ]

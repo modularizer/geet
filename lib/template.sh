@@ -171,6 +171,8 @@ else
   touch "$NEW_LAYER_DIR/.geethier"
 fi
 echo "$LAYER_NAME" >> "$NEW_LAYER_DIR/.geethier"
+debug "made" "$NEW_LAYER_DIR/.geethier"
+
 
 cat > "$NEW_LAYER_DIR/README.md" <<EOFREADME
 # Welcome to the "$LAYER_NAME" template!
@@ -181,15 +183,17 @@ allowing publishing a template which controls files which are interspersed in th
 
 ### Things to know:
 1. Typically, template files get double-tracked
-  - They get pulled into your working directory and tracked by YOU
-  - They ALSO are tracked by the remote template repo
-  - If and when you wish, you can pull updates from the template repo into your project and add and commit the files into your repo
-  - If you are a developer/contributor of the template repo, you can optionally push code back to the template repo using a different git command
-2. `$GEET_ALIAS` is the suggested entrypoint for all your pull/push git-like commands. It protects you and adds some features. More on that later.
-3. $NEW_LAYER_DIR/git.sh is the base git command controlling this template repo. It runs
-    exec git --git-dir="$DOTGIT" --work-tree="$ROOT" -c "core.excludesFile=$EXCLUDE_FILE" "\$@"
-   but use with caution, and prefer to use the suggested entrypoint, because stuff like clean, reset, checkout commands on the template repo could accidentally destroy files in your actual repo
-4. don't worry about .geethier, just leave it be. all it does is identify and trace the layering of templates
+   - They get pulled into your working directory and tracked by YOU
+   - They ALSO are tracked by the remote template repo
+   - If and when you wish, you can pull updates from the template repo into your project and add and commit the files into your repo
+   - If you are a developer/contributor of the template repo, you can optionally push code back to the template repo using a different git command
+2. \`$GEET_ALIAS\` is the suggested entrypoint for all your pull/push git-like commands. It protects you and adds some features. More on that later.
+3. $NEW_LAYER_DIR/git.sh is the base git command controlling this template repo, but **use with caution** or not at all. It runs something _similar_ to
+   \`\`\`bash
+   git --git-dir=".$LAYER_NAME/dot-git" --work-tree="." -c "core.excludesFile=.$LAYER_NAME/.geetexclude" "\$@"
+   \`\`\`
+   clean, reset, or checkout commands (amongst others) on the template repo could accidentally destroy files in your actual repo
+4. don't worry about \`.geethier\`, just leave it be. all it does is identify and trace the layering of templates
 5. You can either operate your template on an include or and exclude basis. You probably know .gitignores are standard, and normally exclude, but in this case since we have all the app code stuff can be a bit different.
    - Let's say your actual full app is 80% of the code and the generic stuff you are turning into a template is only 20% of the code, it might be best to exclude everything to avoid committing implementation-specific code to the template repo, then add some generic files and folders back in, to allow commiting them to the template. This is when you would use .geetinclude for the convenience
    - Alternatively, if your primary goal is to develop a template, and 80% of your code is reusable, but then you just have 20% of "sample" code that you don't want included, maybe just overwrite .geetexclude file entierly, **but leave \*\*/dot-git/ excluded**
@@ -199,8 +203,9 @@ allowing publishing a template which controls files which are interspersed in th
 
 If you're the owner of this template, feel free to overwrite or add to this README to tell users about what your project does. It's all your's from here.
 
-NOTE: this is an auto-generated README but it is likely you can find more info about this template at [https://github.com/$GH_USER/$LAYER_NAME](https://github.com/$GH_USER/$LAYER_NAME), worth trying?!
+NOTE: this is an auto-generated README so we're just guessing here, but it is likely you can find more info about this template at [https://github.com/$GH_USER/$LAYER_NAME](https://github.com/$GH_USER/$LAYER_NAME), worth trying?!
 EOFREADME
+debug "wrote" "$NEW_LAYER_DIR/README.md"
 
 # Create geet-config.json with defaults
 cat > "$NEW_LAYER_DIR/geet-config.json" <<EOFCONFIG
@@ -228,13 +233,16 @@ cat > "$NEW_LAYER_DIR/geet-config.json" <<EOFCONFIG
   }
 }
 EOFCONFIG
+debug "wrote" "$NEW_LAYER_DIR/geet-config.json"
+
+TEMPLATE_DIR="$NEW_LAYER_DIR"
 
 log "created geet-config.json (edit to set your GitHub info)"
 
 # Create or copy .geetinclude from base template
-if [[ -f "$TEMPLATE_GEETINCLUDE" ]]; then
+if [[ -f "$TEMPLATE_DIR/.geetinclude" ]]; then
   log "copying .geetinclude template from $TEMPLATE_GEETINCLUDE"
-  cp "$TEMPLATE_GEETINCLUDE" "$NEW_LAYER_DIR/.geetinclude"
+  cp "$TEMPLATE_DIR/.geetinclude" "$NEW_LAYER_DIR/.geetinclude"
 else
   cat > "$NEW_LAYER_DIR/.geetinclude" <<'EOFGEETINCLUDE'
 # Add your include stuff here, you can call '$GEET_ALIAS sync' to sync it to the .geetexclude if you wish, but it will also auto-sync on every geet command
@@ -286,10 +294,13 @@ cat > "$NEW_LAYER_DIR/.geetexclude" <<EOFGEETEXCLUDE
 **/dot-git/
 EOFGEETEXCLUDE
 
+
+debug "added files"
 ###############################################################################
 # INITIALIZE TEMPLATE GIT REPO FOR THE NEW LAYER
 ###############################################################################
 NEW_DOTGIT="$NEW_LAYER_DIR/dot-git"
+debug "NEW_DOTGIT=$NEW_DOTGIT"
 
 if [ -d "$APP_DIR/.git" ]; then
   log "temporarily moving $APP_DIR/.git to $APP_DIR/not-git"
@@ -310,26 +321,6 @@ fi
 log "don't worry, that file-shuffle was kinda ugly but it was a one-time thing, we don't need to do on every command"
 log "instead, in the future we will use something like 'git --git-dir=<somefolder> --work-tree=<somefolder> -c core.exludesFile=<somefile>'"
 
-###############################################################################
-# COPY WRAPPER SCRIPTS FROM BASE LAYER
-###############################################################################
-# Copy geet-git.sh wrapper from base layer (e.g., from .geet/)
-if [[ -f "$GEET_GIT" ]]; then
-  log "copying geet-git.sh wrapper from $GEET_GIT"
-  cp "$GEET_GIT" "$NEW_LAYER_DIR/geet-git.sh"
-  chmod +x "$NEW_LAYER_DIR/geet-git.sh"
-else
-  die "missing base layer geet-git.sh: $GEET_GIT"
-fi
-
-# Copy geet.sh wrapper from base layer
-if [[ -f "$TEMPLATE_GEET_CMD" ]]; then
-  log "copying geet.sh wrapper from $TEMPLATE_GEET_CMD"
-  cp "$TEMPLATE_GEET_CMD" "$NEW_LAYER_DIR/geet.sh"
-  chmod +x "$NEW_LAYER_DIR/geet.sh"
-else
-  die "missing base layer geet.sh: $TEMPLATE_GEET_CMD"
-fi
 
 ###############################################################################
 # COMPILE WHITELIST AND CREATE INITIAL COMMIT

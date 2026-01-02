@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap 'echo "ERR at ${BASH_SOURCE[0]}:${LINENO}: $BASH_COMMAND" >&2' ERR
 
-GEET_BIN="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-GEET_LIB="$(cd -- "$GEET_BIN/../lib" && pwd)"
-source digest-and-locate.sh "$@"
-
+NODE_BIN="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+GEET_LIB="$(cd -- "$NODE_BIN/../lib/node_modules/geet/lib" && pwd)"
+GEET_ARGS=("$@")
+source "$GEET_LIB/digest-and-locate.sh" "$@"
 cmd="${1:-help}"
 
 
@@ -18,88 +19,88 @@ case "$cmd" in
 
   sync)
     source "$GEET_LIB/sync.sh"
-    sync "$@"
+    sync "${GEET_ARGS[@]:1}"
     ;;
 
   # Explicit non-git commands
   init)
     source "$GEET_LIB/init.sh"
-    init "$@"
+    init "${GEET_ARGS[@]:1}"
     ;;
 
   tree)
     source "$GEET_LIB/tree.sh"
-    tree "$@"
+    tree "${GEET_ARGS[@]:1}"
     ;;
 
   split)
     source "$GEET_LIB/split.sh"
-    split "$@"
+    split "${GEET_ARGS[@]:1}"
     ;;
 
   session)
     source "$GEET_LIB/session.sh"
-    session "$@"
+    session "${GEET_ARGS[@]:1}"
     ;;
 
   template)
     source "$GEET_LIB/template.sh"
-    template "$@"
+    template "${GEET_ARGS[@]:1}"
     ;;
 
   doctor)
     source "$GEET_LIB/doctor.sh"
-    doctor "$@"
+    doctor "${GEET_ARGS[@]:1}"
     ;;
 
   gh)
     source "$GEET_LIB/ghcli.sh"
-    ghcli "$@"
+    ghcli "${GEET_ARGS[@]:1}"
     ;;
 
   publish)
     source "$GEET_LIB/ghcli.sh"
-    ghcli publish "$@"
+    ghcli publish "${GEET_ARGS[@]:1}"
     ;;
 
   install)
     source "$GEET_LIB/git.sh"
-    install "$@"
+    install "${GEET_ARGS[@]:1}"
     ;;
 
   clone)
     source "$GEET_LIB/git.sh"
-    clone "$@"
+    clone "${GEET_ARGS[@]:1}"
     ;;
 
   # Explicit escape hatch
   git)
-    exec "$GEET_GIT" "$@"
+    exec "$GEET_GIT" "${GEET_ARGS[@]:1}"
     ;;
 
   soft-detach,soft_detach,slide)
     source "$GEET_LIB/detach.sh"
-    soft_detach "$@"
+    soft_detach "${GEET_ARGS[@]:1}"
     ;;
 
   detach,hard-detach)
     source "$GEET_LIB/detach.sh"
-    detach "$@"
+    detach "${GEET_ARGS[@]:1}"
     ;;
 
   detached)
       source "$GEET_LIB/detach.sh"
-      detached "$@"
+      detached "${GEET_ARGS[@]:1}"
       ;;
 
   soft-detached,soft_detached,slid)
         source "$GEET_LIB/detach.sh"
-        soft_detached "$@"
+        soft_detached "${GEET_ARGS[@]:1}"
         ;;
 
   retach)
       source "$GEET_LIB/detach.sh"
-      retach "$@"
+      retach "${GEET_ARGS[@]:1}"
       ;;
 
   precommit,pc)
@@ -109,16 +110,16 @@ case "$cmd" in
   remove,rm,destroy)
     brave_guard
     source "$GEET_LIB/remove.sh"
-    retach "$@"
+    retach "${GEET_ARGS[@]:1}"
     ;;
 
   bug,feature,issue,whoops,suggest)
     source "$GEET_LIB/whoops.sh"
-    open_issue "$@"
+    open_issue "${GEET_ARGS[@]:1}"
     ;;
 
   # Default: assume git subcommand
   *)
-    exec "$GEET_GIT" "$cmd" "$@"
+    exec "$GEET_GIT" "$cmd" "${GEET_ARGS[@]:1}"
     ;;
 esac

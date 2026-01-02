@@ -1,37 +1,35 @@
 # has-flag.sh
-#
 # Usage:
 #   source has-flag.sh FLAG_NAME VAR_NAME "$@"
-#
-# Example:
-#   source has-flag.sh --template-dir TEMPLATE_DIR "$@"
-#
 # Effects:
-#   - Sets $TEMPLATE_DIR to the hased value (empty if not present)
-#   - Removes --template-dir and its value from "$@"
-#   - Mutates caller's positional parameters
-#   - if FLAG_NAME is specified multiple times in "$@" then all get removed, and the last one wins, gets set to VAR_NAME
+#   - Sets VAR_NAME to "true" or ""
+#   - Removes FLAG_NAME from the caller's positional args ($@)
 
-has_flag() {
-  local flag="$1"
-  local -n out_var="$2"
-  shift 2
+flag="$1"
+varname="$2"
+shift 2
 
-  local cleaned=()
-  local value=""
+cleaned=()
+found=""
 
-  while [ "$#" -gt 0 ]; do
-    if [ "$1" = "$flag" ] && [ "$#" -gt 1 ]; then
-      value="true"
-    else
-      cleaned+=("$1")
-      shift
-    fi
-  done
+while (( $# > 0 )); do
+  if [[ "$1" == "$flag" ]]; then
+    found="true"
+  else
+    cleaned+=("$1")
+  fi
+  shift
+done
 
-  out_var="$value"
-  set -- "${cleaned[@]}"
-}
+# Set caller variable by name (safe even if unset)
+printf -v "$varname" '%s' "$found"
 
-has_flag "$@"
+echo "setting" "${cleaned[@]}"
+# ... build cleaned ...
+GEET_ARGS=("${cleaned[@]}")
+
+# Reset caller positional params (because this file is sourced)
+set -- "${GEET_ARGS[@]}"
+
+
 

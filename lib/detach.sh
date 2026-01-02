@@ -2,7 +2,6 @@ is_literal_file_pat() {
   local p="$1"
   [[ "$p" != */ ]] || return 1                 # not a directory pattern
   [[ "$p" != *[\*\?\[]* ]] || return 1         # no glob chars *, ?, [
-  return 0
 }
 
 # List tracked files matching a user-supplied glob-ish pattern.
