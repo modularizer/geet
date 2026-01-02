@@ -2,8 +2,8 @@ _get_min_level() {
   local min_level="INFO"
 
   # explicit flag wins if provided (e.g. --min-level WARN)
-  if [[ -n "$MIN_LEVEL" ]]; then
-    min_level="$MIN_LEVEL"
+  if [[ -n "$MIN_LOG_LEVEL" ]]; then
+    min_level="$MIN_LOG_LEVEL"
   elif [[ "$SILENT" ]]; then
     min_level="NEVER"
   elif [[ "$VERBOSE" ]]; then
@@ -17,19 +17,16 @@ _get_min_level() {
 
 get_specified_level() {
   # These helpers should set variables in *this* shell context.
-  source "$GEET_LIB/extract-flag.sh" --min-level "MIN_LEVEL" "$@"
-  source "$GEET_LIB/has-flag.sh" --verbose "VERBOSE" "$@"
-  source "$GEET_LIB/has-flag.sh" --quiet "QUIET" "$@"
-  source "$GEET_LIB/has-flag.sh" --silent "SILENT" "$@"
+  extract_flag --min-level MIN_LOG_LEVEL
+  has_flag --verbose VERBOSE
+  has_flag --quiet QUIET
+  has_flag --silent SILENT
 
-  local min_level
-  min_level="$(_get_min_level)"
-  printf "%s" "$min_level"
+  MIN_LOG_LEVEL="$(_get_min_level)"
 }
 
 get_log_filter() {
-  source "$GEET_LIB/extract-flag.sh" --filter "LOG_FILTER" "$@"
-  printf "%s" "$LOG_FILTER"
+  extract_flag --filter LOG_FILTER
 }
 _color_enabled() {
   # Enable colors only if:

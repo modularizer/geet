@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # prework.sh - Inspect geet prework variables and config values
 
 prework() {

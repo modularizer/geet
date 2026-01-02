@@ -6,6 +6,7 @@ NODE_BIN="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 GEET_LIB="$(cd -- "$NODE_BIN/../lib/node_modules/geet/lib" && pwd)"
 GEET_ARGS=("$@")
 source "$GEET_LIB/digest-and-locate.sh" "$@"
+debug "GEET_ARGS=${GEET_ARGS[@]}"
 cmd="${1:-help}"
 
 

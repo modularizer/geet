@@ -57,7 +57,7 @@ EOF
   return 0
 fi
 
-source "$GEET_LIB/has-flag.sh" --skip-post SKIP_POST_INIT "$@"
+has_flag --skip-post SKIP_POST_INIT
 
 ###############################################################################
 # SETUP

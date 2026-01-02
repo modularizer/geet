@@ -85,18 +85,24 @@ DEFAULT_GEET_ALIAS="geet"
 DEFAULT_GH_USER="<repo-owner>"
 DDD_APP_NAME="MyApp"
 DDD_TEMPLATE_NAME="mytemplate"
+TEMPLATE_NAME=""
 
 # Directory this script lives in (.geet/lib)
 GEET_LIB="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
+source "$GEET_LIB/flags.sh"
 source "$GEET_LIB/logger.sh"
-MIN_LOG_LEVEL="$(get_specified_level "$@")"
-LOG_FILTER="$(get_log_filter "$@")"
 
-TEMPLATE_NAME=""
+get_specified_level
+get_log_filter
+
+debug "original args: $@"
+debug "cleaned args: ${GEET_ARGS[@]}"
+
+
 debug "VERBOSE MODE ENABLED"
 
-source "$GEET_LIB/has-flag.sh" --brave "BRAVE" "$@"
+has_flag --brave BRAVE
 debug "BRAVE='$BRAVE'"
 log_if_brave() {
   if [[ -n "${BRAVE:-}" ]]; then
@@ -287,7 +293,7 @@ if [[ -f "$GEET_GLOBAL_CONFIG" ]]; then
 fi
 
 # Extract --geet-dir <value> from args (mutates caller positional params)
-source "$GEET_LIB/extract-flag.sh" --geet-dir TEMPLATE_DIR "$@"
+has_flag --geet-dir TEMPLATE_DIR
 
 # FAST PATH: Try to load cached TEMPLATE_DIR from .geet-local.env
 if [[ -z "$TEMPLATE_DIR" ]]; then
