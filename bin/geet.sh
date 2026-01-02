@@ -74,6 +74,21 @@ case "$cmd" in
     exec "$TEMPLATE_GEET_GIT" "$@"
     ;;
 
+  detach)
+    source "$GEET_LIB/detach.sh"
+    detach "$@"
+    ;;
+
+  detached)
+      source "$GEET_LIB/detach.sh"
+      detached "$@"
+      ;;
+
+  retach)
+      source "$GEET_LIB/detach.sh"
+      retach "$@"
+      ;;
+
   # Default: assume git subcommand
   *)
     exec "$TEMPLATE_GEET_GIT" "$cmd" "$@"
