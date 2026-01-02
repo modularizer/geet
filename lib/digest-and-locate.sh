@@ -64,6 +64,7 @@
 #   read_config                       # read_config KEY [DEFAULT] - extract values from config.json
 #   geet_git                          # geet_git [args...] - wrapper for geet-git.sh
 #   detect_template_dir_from_cwd      # auto-detect template directory from current working directory
+#   find_git_root                     # find git root directory (searches upward for .git)
 #   log_if_brave                      # log_if_brave MESSAGE - log only if $BRAVE is set
 #   brave_guard                       # brave_guard CMD [REASON] - exit unless --brave flag present
 #
@@ -235,10 +236,58 @@ fi
 #  return 1
 #fi
 debug "TEMPLATE_DIR=$TEMPLATE_DIR"
-DOTGIT="$TEMPLATE_DIR/dot-git"
-GEET_GIT="$TEMPLATE_DIR/geet-git.sh"
-SOFT_DETACHED="$DOTGIT/info/geet-protected"
+
+# Helper to find git root directory
+find_git_root() {
+  local dir="$PWD"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -d "$dir/.git" ]]; then
+      printf '%s' "$dir"
+      return 0
+    fi
+    dir="$(dirname "$dir")"
+  done
+  printf '%s' ""
+}
+
+# Set template-dependent paths (only if TEMPLATE_DIR exists)
+if [[ -n "$TEMPLATE_DIR" ]]; then
+  DOTGIT="$TEMPLATE_DIR/dot-git"
+  GEET_GIT="$TEMPLATE_DIR/geet-git.sh"
+  SOFT_DETACHED="$DOTGIT/info/geet-protected"
+  TEMPLATE_JSON="$TEMPLATE_DIR/$CONFIG_NAME"
+  APP_DIR="$(cd "$(dirname -- "$TEMPLATE_DIR")" && pwd -P)"
+  APP_NAME="$(basename -- "$APP_DIR")"
+
+  if [[ -f "$TEMPLATE_JSON" ]]; then
+    debug "found config at $TEMPLATE_JSON"
+  else
+    warn "no config found at $TEMPLATE_JSON"
+  fi
+  debug "APP_DIR=$APP_DIR"
+else
+  DOTGIT=""
+  GEET_GIT=""
+  SOFT_DETACHED=""
+  TEMPLATE_JSON=""
+
+  # Even without a template dir, try to detect APP_DIR from git root
+  GIT_ROOT="$(find_git_root)"
+  if [[ -n "$GIT_ROOT" ]]; then
+    APP_DIR="$GIT_ROOT"
+    APP_NAME="$(basename -- "$APP_DIR")"
+    debug "no template dir found, but detected APP_DIR from git root: $APP_DIR"
+  else
+    APP_DIR=""
+    APP_NAME=""
+    debug "no template dir and no git root found"
+  fi
+fi
+
 geet_git () {
+  if [[ -z "$GEET_GIT" ]]; then
+    die "geet_git called but GEET_GIT is not set (no template directory found)"
+  fi
   debug "Calling:" "$GEET_GIT" "$@"
   "$GEET_GIT" "$@"
   local rc=$?
@@ -246,45 +295,6 @@ geet_git () {
 }
 
 
-# Derive repo dir + config path
-if [[ "$TEMPLATE_DIR" ]]; then
-  TEMPLATE_JSON="$TEMPLATE_DIR/$CONFIG_NAME"
-  if [[ "$TEMPLATE_DIR" ]] && [[ -f "$TEMPLATE_JSON" ]]; then
-    debug "found config at $TEMPLATE_JSON"
-  else
-    warn "no config found at $TEMPLATE_JSON"
-  fi
-else
-  TEMPLATE_JSON=""
-fi
-
-
-APP_DIR="$(cd "$(dirname -- "$TEMPLATE_DIR")" && pwd -P)"
-APP_NAME="$(basename -- "$APP_DIR")"
-debug "APP_DIR=$APP_DIR"
-# Read a key from the template JSON config.
-# Uses jq; returns default (or empty string) if key missing or null.
-read_config() {
-  local key="$1"
-  local default="${2-}"
-  if [[ -f "$TEMPLATE_JSON" ]]; then
-    jq -r --arg key "$key" --arg default "$default" '.[$key] // $default' "$TEMPLATE_JSON"
-  else
-    printf "$default"
-  fi
-}
-
-# read config
-GEET_ALIAS="$(read_config geetAlias "$DEFAULT_GEET_ALIAS")"
-TEMPLATE_GH_USER="$(read_config ghUser "$DEFAULT_GH_USER")"
-TEMPLATE_GH_NAME="$(read_config ghName "$TEMPLATE_NAME")"
-TEMPLATE_NAME="$(read_config name "$TEMPLATE_NAME")"
-TEMPLATE_DESC="$(read_config desc "")"
-TEMPLATE_GH_URL="$(read_config ghURL "https://github.com/$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME")"
-TEMPLATE_GH_SSH="$(read_config ghSSH "git@github.com:$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME.git")"
-TEMPLATE_GH_HTTPS="$(read_config ghHTTPS "$TEMPLATE_GH_URL.git")"
-DD_APP_NAME="$(read_config demoDocAppName "$DDD_APP_NAME")"
-DD_TEMPLATE_NAME="$(read_config demoDocTemplateName "$DDD_TEMPLATE_NAME")"
 
 # Auto-detect GitHub username
 GH_USER="$DEFAULT_GH_USER"
@@ -305,6 +315,51 @@ if [[ "$GH_USER" == "$DEFAULT_GH_USER" ]]; then
       debug "detected GitHub user from git config: $GH_USER"
     fi
   fi
+fi
+
+
+
+# Read a key from the template JSON config.
+# Uses jq; returns default (or empty string) if key missing or null.
+read_config() {
+  local key="$1"
+  local default="${2-}"
+  if [[ -f "$TEMPLATE_JSON" ]]; then
+    jq -r --arg key "$key" --arg default "$default" '.[$key] // $default' "$TEMPLATE_JSON"
+  else
+    printf "$default"
+  fi
+}
+
+# read config (only if template directory exists)
+if [[ -n "$TEMPLATE_DIR" ]]; then
+  GEET_ALIAS="$(read_config geetAlias "$DEFAULT_GEET_ALIAS")"
+  TEMPLATE_GH_USER="$(read_config ghUser "$GH_USER")"
+  TEMPLATE_GH_NAME="$(read_config ghName "$TEMPLATE_NAME")"
+  TEMPLATE_NAME="$(read_config name "$TEMPLATE_NAME")"
+  TEMPLATE_DESC="$(read_config desc "")"
+  if [[ -n "$TEMPLATE_GH_NAME" ]]; then
+    TEMPLATE_GH_URL="$(read_config ghURL "https://github.com/$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME")"
+    TEMPLATE_GH_SSH="$(read_config ghSSH "git@github.com:$TEMPLATE_GH_USER/$TEMPLATE_GH_NAME.git")"
+    TEMPLATE_GH_HTTPS="$(read_config ghHTTPS "$TEMPLATE_GH_URL.git")"
+  else
+    TEMPLATE_GH_URL=""
+    TEMPLATE_GH_SSH=""
+    TEMPLATE_GH_HTTPS=""
+  fi
+  DD_APP_NAME="$(read_config demoDocAppName "$DDD_APP_NAME")"
+  DD_TEMPLATE_NAME="$(read_config demoDocTemplateName "$DDD_TEMPLATE_NAME")"
+else
+  GEET_ALIAS="$DEFAULT_GEET_ALIAS"
+  TEMPLATE_GH_USER=""
+  TEMPLATE_GH_NAME=""
+  TEMPLATE_NAME=""
+  TEMPLATE_DESC=""
+  TEMPLATE_GH_URL=""
+  TEMPLATE_GH_SSH=""
+  TEMPLATE_GH_HTTPS=""
+  DD_APP_NAME="$DDD_APP_NAME"
+  DD_TEMPLATE_NAME="$DDD_TEMPLATE_NAME"
 fi
 
 

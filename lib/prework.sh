@@ -1,16 +1,12 @@
 #!/usr/bin/env bash
-# check.sh - Inspect geet variables and config values
+# prework.sh - Inspect geet prework variables and config values
 
-check() {
-  local key="${1:-}"
-
-  if [[ -z "$key" ]]; then
-    die "Usage: geet check KEY\n\nExample:\n  geet check TEMPLATE_NAME\n  geet check geetAlias\n  geet check all"
-  fi
+prework() {
+  local key="${1:-all}"
 
   # Special case: print all variables
   if [[ "$key" == "all" ]]; then
-    debug "Printing all geet variables"
+    debug "Printing all geet prework variables"
 
     # Color codes
     local key_color=""
@@ -95,28 +91,34 @@ check() {
 
 
 
-    # Paths & Directories
-    print_header "PATHS & DIRECTORIES"
+    # Geet Installation
+    print_header "GEET INSTALLATION"
     print_var GEET_LIB "Path to geet lib directory"
     print_var GEET_CMD "Path to geet.sh entrypoint"
-    print_var APP_DIR "Your app's root directory"
-    print_var APP_NAME "Name of your app"
+
+    # Template Directory
+    print_header "TEMPLATE DIRECTORY"
     print_var TEMPLATE_DIR "Template directory (e.g., .mytemplate)"
     print_var DOTGIT "Template's git directory (dot-git)"
     print_var GEET_GIT "Path to geet-git.sh wrapper"
-    print_var SOFT_DETACHED "List of soft-detached files"
+    print_var SOFT_DETACHED "Soft-detached files list"
     print_var TEMPLATE_JSON "Path to template config.json"
-
-    # Config values
-    print_header "CONFIG VALUES (from config.json)"
     print_var TEMPLATE_NAME "Template name"
     print_var TEMPLATE_DESC "Template description"
-    print_var GEET_ALIAS "Command alias (usually 'geet')"
     print_var TEMPLATE_GH_USER "Template owner's GitHub username"
     print_var TEMPLATE_GH_NAME "GitHub repository name"
     print_var TEMPLATE_GH_URL "GitHub repository URL"
     print_var TEMPLATE_GH_SSH "SSH remote URL"
     print_var TEMPLATE_GH_HTTPS "HTTPS remote URL"
+
+    # App Directory
+    print_header "APP DIRECTORY"
+    print_var APP_DIR "Your app's root directory"
+    print_var APP_NAME "Name of your app"
+
+    # Config values
+    print_header "CONFIG VALUES (from config.json)"
+    print_var GEET_ALIAS "Command alias (usually 'geet')"
     print_var DD_APP_NAME "App name used in docs"
     print_var DD_TEMPLATE_NAME "Template name used in docs"
 

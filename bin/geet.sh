@@ -53,9 +53,9 @@ case "$cmd" in
     doctor "${GEET_ARGS[@]:1}"
     ;;
 
-  check)
-    source "$GEET_LIB/check.sh"
-    check "${GEET_ARGS[@]:1}"
+  prework)
+    source "$GEET_LIB/prework.sh"
+    prework "${GEET_ARGS[@]:1}"
     ;;
 
   gh)
