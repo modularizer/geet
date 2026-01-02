@@ -126,19 +126,24 @@ brave_guard() {
 # Fast .env file loader (no external processes, idempotent)
 load_env_file() {
   local file="$1"
-  [[ ! -f "$file" ]] && return 1
+  debug "loading $file"
+  [[ ! -f "$file" ]] && return 0
 
-  # Source only if not already loaded (idempotency)
   local marker_name="LOADED_${file//[^a-zA-Z0-9]/_}"
-  local -n loaded_marker="$marker_name"
-  [[ "$loaded_marker" == "true" ]] && return 0
+
+  # nounset-safe "is it already true?"
+  if [[ "${!marker_name-}" == "true" ]]; then
+    return 0
+  fi
 
   # shellcheck disable=SC1090
-  source "$file" 2>/dev/null || return 1
-  loaded_marker="true"
+  source "$file" 2>/dev/null || return 0
+
+  printf -v "$marker_name" 'true'
   debug "loaded env file: $file"
   return 0
 }
+
 
 # Write local cache file (system-specific paths)
 write_geet_local_env() {

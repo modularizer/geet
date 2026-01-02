@@ -1,5 +1,5 @@
 sync() {
-  echo "SYNC"
+  debug "running sync"
   # Show help if requested
   if [[ "${1:-}" == "help" || "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     cat <<EOF
