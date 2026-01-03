@@ -14,6 +14,10 @@ Only Git's *view* of the filesystem changes.
     In fact, it may not even be possible to move around all my files without breaking things. 
     Plus, supporting this template is my **secondary task** which I want to do in tandem with my **primary development**, using my main repository's working directory and publishing some pieces to the template repo.”
 
+## Why Not?
+> If you can super cleanly separate your template from your app or make your sourcecode fully modular, you don't need geet, use a normal repo or maybe submodules.
+
+## Why?
 - **Making code re-usable is a struggle**, especially if you want to ship an incomplete template that is not easily separated into a standalone module.
 - Modern React Native / Expo apps are **extremely path-sensitive**:
   * file-based routing
@@ -25,8 +29,6 @@ Only Git's *view* of the filesystem changes.
 - submodules don't support interleaving files and folders of template code with custom app code
 - I want to simultaneously develop many apps with a similar architecture
 
-## Why Not?
-> If you can super cleanly separate your template from your app or make your sourcecode fully modular, you don't need geet, use a normal repo or maybe submodules.
 
 ---
 ## PreReqs
@@ -43,9 +45,6 @@ npm install -g geet-geet
 geet
 ```
 
-Try our [Demo](/docs/DEMO.md)
-
----
 
 ## Table of Contents
 
@@ -59,3 +58,6 @@ Try our [Demo](/docs/DEMO.md)
 8. [Contributing to geet](/docs/CONTRIBUTING.md)
 9. [FAQ](/docs/FAQ.md)
 10. [Demo](/docs/DEMO.md)
+
+---
+

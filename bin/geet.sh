@@ -157,6 +157,11 @@ case "$cmd" in
     echo "$(is_ignored "${GEET_ARGS[@]:1}")"
     ;;
 
+  inspect)
+    source "$GEET_LIB/inspect.sh"
+    inspect "${GEET_ARGS[@]:1}"
+    ;;
+
   # Default: assume git subcommand
   *)
     source "$GEET_LIB/git.sh"

@@ -19,6 +19,7 @@ TEMPLATE MANAGEMENT:
 FILE MANAGEMENT:
   tree [list|tracked|all]                                Show what files the template includes
   split <dest> [mode]                                    Export template files to external folder
+  inspect <path>                                         Show which layer tracks a file and its git status
   sync                                                   Compile .geetinclude whitelist into .geetexclude
   include <path>                                         Manage included files
   ignored|included|excluded <path>                       Check if a path is ignored/included/excluded
@@ -61,6 +62,7 @@ USAGE:
   install  <repo> <dir>  [--public|--private|--internal] Do a git clone of a repo and convert it into a repo of your own
   tree [list|tracked|all]                                Show what files the template includes
   split <dest> [mode]                                    Export template files to external folder
+  inspect <path>                                         Show which layer tracks a file and its git status
   prework                                                See what we know
   why / whynot                                           Reasons to (or not to) use geet
   version / --version                                    Show geet version
