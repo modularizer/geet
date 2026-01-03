@@ -6,8 +6,8 @@
 # 2. you have access to the following:
 #
 # === PATHS & DIRECTORIES ===
-#   $GEET_LIB                         # e.g. node_modules/geet/lib
-#   $GEET_CMD                         # e.g. node_modules/geet/bin/geet.sh
+#   $GEET_LIB                         # e.g. node_modules/geet-geet/lib
+#   $GEET_CMD                         # e.g. node_modules/geet-geet/bin/geet.sh
 #   $APP_DIR                          # e.g. MyApp/
 #   $APP_NAME                         # e.g. "MyApp"
 #   $TEMPLATE_DIR                     # e.g. MyApp/.mytemplate

@@ -4,7 +4,7 @@
 
 ```bash
 # Clone the repo
-git clone https://github.com/anthropics/geet.git
+git clone https://github.com/modularizer/geet.git
 cd geet
 
 # The scripts are in lib/

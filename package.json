@@ -1,9 +1,10 @@
 {
-  "name": "geet",
+  "name": "geet-geet",
   "version": "0.1.0",
   "private": false,
   "bin": {
-    "geet": "bin/geet.sh"
+    "geet": "bin/geet.sh",
+    "geet-geet": "bin/geet.sh"
   },
   "files": [
     "bin/",

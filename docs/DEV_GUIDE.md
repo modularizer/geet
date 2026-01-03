@@ -22,7 +22,7 @@ set -euo pipefail
 
 # 1. Locate the geet library
 NODE_BIN="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-GEET_LIB="$(cd -- "$NODE_BIN/../lib/node_modules/geet/lib" && pwd)"
+GEET_LIB="$(cd -- "$NODE_BIN/../lib/node_modules/geet-geet/lib" && pwd)"
 
 # 2. Run the prework (digest-and-locate.sh)
 source "$GEET_LIB/digest-and-locate.sh" "$@"

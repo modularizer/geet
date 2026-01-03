@@ -5,15 +5,7 @@ This guide walks you through testing geet's core features in under 10 minutes.
 ## Prerequisites
 
 ```bash
-# Install geet globally
-git clone https://github.com/modularizer/geet.git
-cd geet
-npm install -g .
-
-# Or install from source:
-git clone https://github.com/modularizer/geet.git
-cd geet
-npm install -g .
+npm install -g geet-geet
 ```
 
 ---
@@ -21,7 +13,7 @@ npm install -g .
 ## Demo 1: Create and use a basic template
 
 ### Step 1: Create normal sample git repo
-
+There is nothing special about this repo. It has no clue it will become a geet template.
 ```bash
 # Create a minimal Expo Router app template (5 tiny files)
 mkdir myapp
@@ -73,32 +65,21 @@ git commit -m "Minimal Expo Router sample with multiple routes"
 
 ### Step 2: Initialize the template layer
 ```bash
-geet template mytemplate
+geet template mytemplate "just a demo template"
 
-# Add files to the template layer
-geet add -A
+# Add some of the app files to the template layer (geet include modifies the .geetinclude then calls geet add)
+geet include "app/index.tsx" "app/_layout.tsx" "app/about.tsx"
 geet commit -m "Initial template layer"
 
-# Push to GitHub (optional)
-# geet gh pub
+# Push to GitHub
+ geet pub
 ```
 
-### Step 2: Use the template in a new app
+### Step 3: Use the template in a new app
 
 ```bash
-# Clone the template
-cd ..
-geet clone ./my-template MyApp
-
-# Or if published to GitHub:
-# geet clone https://github.com/you/my-template MyApp
-
-cd MyApp
-
-# You now have:
-# - A fresh app repo (.git)
-# - The template layer (.geet/dot-git)
-# - Template files (app/shared/Button.tsx, package.json)
+# Clone and set up the template
+geet install <your-github-username>/mytemplate MyApp
 ```
 
 ### Step 3: Customize your app

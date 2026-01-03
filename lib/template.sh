@@ -194,9 +194,7 @@ allowing publishing a template which controls files which are interspersed in th
 
 ## QUICKSTART
 \`\`\`bash
-git clone https://github.com/modularizer/geet.git
-cd geet
-npm install -g .
+npm install -g geet-geet
 geet install $GH_USER/$LAYER_NAME.git $DD_APP_NAME
 \`\`\`
 
