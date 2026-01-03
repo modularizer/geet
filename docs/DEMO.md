@@ -6,7 +6,9 @@ This guide walks you through testing geet's core features in under 10 minutes.
 
 ```bash
 # Install geet globally
-npm install -g geet
+git clone https://github.com/modularizer/geet.git
+cd geet
+npm install -g .
 
 # Or install from source:
 git clone https://github.com/modularizer/geet.git
