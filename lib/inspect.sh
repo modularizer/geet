@@ -252,82 +252,154 @@ fi
 
 echo
 
-# Diff summary if tracked in both repos
-if [[ "$template_tracked" == "true" && "$app_tracked" == "true" ]]; then
-  echo "${c_gray}File tracked in both layers${c_reset}"
-  echo
+# Content comparison across all three states
+if [[ -e "$APP_DIR/$path" ]] || [[ "$template_tracked" == "true" ]] || [[ "$app_tracked" == "true" ]]; then
+  echo "${c_bold}Content comparison:${c_reset}"
 
-  # Create temporary files for diff
-  tmp_template=$(mktemp)
-  tmp_app=$(mktemp)
+  # Get checksums for comparison
+  working_hash=""
+  template_head_hash=""
+  app_head_hash=""
 
-  # Get file contents from both repos directly to temp files
-  template_success=false
-  app_success=false
-
-  if git --git-dir="$DOTGIT" --work-tree="$APP_DIR" show HEAD:"$path" > "$tmp_template" 2>/dev/null; then
-    template_success=true
+  # Working tree hash
+  if [[ -e "$APP_DIR/$path" ]]; then
+    working_hash=$(md5sum "$APP_DIR/$path" 2>/dev/null | cut -d' ' -f1 || echo "")
   fi
 
-  if git -C "$APP_DIR" show HEAD:"$path" > "$tmp_app" 2>/dev/null; then
-    app_success=true
+  # Template HEAD hash
+  if [[ "$template_tracked" == "true" ]]; then
+    template_head_hash=$(git --git-dir="$DOTGIT" --work-tree="$APP_DIR" show HEAD:"$path" 2>/dev/null | md5sum | cut -d' ' -f1 || echo "")
   fi
 
-  debug "template_success=$template_success app_success=$app_success"
-  debug "tmp_template size: $(wc -c < "$tmp_template" 2>/dev/null || echo 0)"
-  debug "tmp_app size: $(wc -c < "$tmp_app" 2>/dev/null || echo 0)"
+  # App HEAD hash
+  if [[ "$app_tracked" == "true" ]]; then
+    app_head_hash=$(git -C "$APP_DIR" show HEAD:"$path" 2>/dev/null | md5sum | cut -d' ' -f1 || echo "")
+  fi
 
-  if [[ "$template_success" == "true" && "$app_success" == "true" ]]; then
-    # Check if files are identical
-    debug "Comparing files with cmp..."
-    if cmp -s "$tmp_template" "$tmp_app"; then
-      debug "Files are identical"
-      echo "${c_green}Diff: identical${c_reset}"
+  # Compare and show relationships
+  working_exists=$([[ -n "$working_hash" ]] && echo "true" || echo "false")
+  template_exists=$([[ -n "$template_head_hash" ]] && echo "true" || echo "false")
+  app_exists=$([[ -n "$app_head_hash" ]] && echo "true" || echo "false")
+
+  # Build comparison display
+  if [[ "$working_exists" == "true" && "$template_exists" == "true" && "$app_exists" == "true" ]]; then
+    # All three exist - compare them
+    if [[ "$working_hash" == "$template_head_hash" && "$working_hash" == "$app_head_hash" ]]; then
+      echo "  ${c_green}✓ All three states identical${c_reset}"
+    elif [[ "$working_hash" == "$template_head_hash" && "$working_hash" != "$app_head_hash" ]]; then
+      echo "  ${c_yellow}Working tree = Template HEAD ≠ App HEAD${c_reset}"
+    elif [[ "$working_hash" == "$app_head_hash" && "$working_hash" != "$template_head_hash" ]]; then
+      echo "  ${c_yellow}Working tree = App HEAD ≠ Template HEAD${c_reset}"
+    elif [[ "$template_head_hash" == "$app_head_hash" && "$working_hash" != "$template_head_hash" ]]; then
+      echo "  ${c_yellow}Template HEAD = App HEAD ≠ Working tree${c_reset}"
     else
-      debug "Files differ, calculating diff stats..."
-
-      # Save diff to temp file
-      tmp_diff=$(mktemp)
-      debug "Running diff..."
-      diff -u "$tmp_template" "$tmp_app" > "$tmp_diff" 2>/dev/null || true
-      debug "Diff complete, analyzing..."
-
-      # Count added and removed lines (app vs template)
-      # Turn off pipefail temporarily to avoid issues with grep
-      set +o pipefail
-      added=$(grep "^\+" "$tmp_diff" | grep -v "^\+\+\+" | wc -l | tr -d ' \n\r')
-      removed=$(grep "^\-" "$tmp_diff" | grep -v "^\-\-\-" | wc -l | tr -d ' \n\r')
-      set -o pipefail
-
-      # Default to 0 if empty
-      added=${added:-0}
-      removed=${removed:-0}
-
-      debug "Diff added=$added removed=$removed"
-
-      # Show diff summary (template → app comparison)
-      if [[ "$added" == "0" && "$removed" == "0" ]]; then
-        echo "${c_green}Diff (template → app): no changes${c_reset}"
-      else
-        echo "${c_yellow}Diff (template → app): +${added} -${removed} lines${c_reset}"
-      fi
-
-      # Cleanup diff temp file
-      rm -f "$tmp_diff"
+      echo "  ${c_red}✗ All three states differ${c_reset}"
     fi
-  else
-    debug "Failed to get file contents for diff comparison"
-    if [[ "$template_success" != "true" ]]; then
-      debug "Template repo git show failed"
+  elif [[ "$working_exists" == "true" && "$template_exists" == "true" && "$app_exists" == "false" ]]; then
+    if [[ "$working_hash" == "$template_head_hash" ]]; then
+      echo "  ${c_green}Working tree = Template HEAD${c_reset} ${c_gray}(not in app HEAD)${c_reset}"
+    else
+      echo "  ${c_yellow}Working tree ≠ Template HEAD${c_reset} ${c_gray}(not in app HEAD)${c_reset}"
     fi
-    if [[ "$app_success" != "true" ]]; then
-      debug "App repo git show failed"
+  elif [[ "$working_exists" == "true" && "$template_exists" == "false" && "$app_exists" == "true" ]]; then
+    if [[ "$working_hash" == "$app_head_hash" ]]; then
+      echo "  ${c_green}Working tree = App HEAD${c_reset} ${c_gray}(not in template HEAD)${c_reset}"
+    else
+      echo "  ${c_yellow}Working tree ≠ App HEAD${c_reset} ${c_gray}(not in template HEAD)${c_reset}"
+    fi
+  elif [[ "$working_exists" == "false" && "$template_exists" == "true" && "$app_exists" == "true" ]]; then
+    if [[ "$template_head_hash" == "$app_head_hash" ]]; then
+      echo "  ${c_green}Template HEAD = App HEAD${c_reset} ${c_gray}(no working tree)${c_reset}"
+    else
+      echo "  ${c_yellow}Template HEAD ≠ App HEAD${c_reset} ${c_gray}(no working tree)${c_reset}"
     fi
   fi
 
-  # Cleanup
-  rm -f "$tmp_template" "$tmp_app"
   echo
 fi
+
+# Show all three pairwise diffs
+echo "${c_bold}Diffs:${c_reset}"
+
+# Create temp files for all three states
+tmp_working=$(mktemp)
+tmp_template_head=$(mktemp)
+tmp_app_head=$(mktemp)
+
+# Get contents
+working_file_exists=false
+template_head_exists=false
+app_head_exists=false
+
+if [[ -e "$APP_DIR/$path" ]]; then
+  cp "$APP_DIR/$path" "$tmp_working" 2>/dev/null && working_file_exists=true
+fi
+
+if [[ "$template_tracked" == "true" ]]; then
+  git --git-dir="$DOTGIT" --work-tree="$APP_DIR" show HEAD:"$path" > "$tmp_template_head" 2>/dev/null && template_head_exists=true
+fi
+
+if [[ "$app_tracked" == "true" ]]; then
+  git -C "$APP_DIR" show HEAD:"$path" > "$tmp_app_head" 2>/dev/null && app_head_exists=true
+fi
+
+# Helper function to compute diff stats on one line
+compute_diff() {
+  local file1="$1"
+  local file2="$2"
+  local name1="$3"
+  local name2="$4"
+  local show_status="${5:-false}"  # Show ahead/behind for HEAD comparisons
+
+  if cmp -s "$file1" "$file2"; then
+    echo "  ${c_green}${name1} → ${name2}: identical${c_reset}"
+  else
+    local tmp_d=$(mktemp)
+    diff -u "$file1" "$file2" > "$tmp_d" 2>/dev/null || true
+    set +o pipefail
+    local add=$(grep "^\+" "$tmp_d" | grep -v "^\+\+\+" | wc -l | tr -d ' \n\r')
+    local rem=$(grep "^\-" "$tmp_d" | grep -v "^\-\-\-" | wc -l | tr -d ' \n\r')
+    set -o pipefail
+    add=${add:-0}
+    rem=${rem:-0}
+    rm -f "$tmp_d"
+
+    # Build descriptive diff summary
+    local summary=""
+    local status=""
+
+    if [[ "$add" -eq 0 && "$rem" -gt 0 ]]; then
+      summary="${name2} has ${rem} fewer line(s)"
+      [[ "$show_status" == "true" ]] && status=" ${c_cyan}(${name2} is behind ${name1})${c_reset}"
+    elif [[ "$add" -gt 0 && "$rem" -eq 0 ]]; then
+      summary="${name2} has ${add} more line(s)"
+      [[ "$show_status" == "true" ]] && status=" ${c_cyan}(${name2} is ahead ${name1})${c_reset}"
+    elif [[ "$add" -gt 0 && "$rem" -gt 0 ]]; then
+      summary="${name2} has ${add} more, ${rem} fewer lines"
+      status=" ${c_red}(diverged)${c_reset}"
+    fi
+
+    echo "  ${c_yellow}${name1} → ${name2}:${c_reset} ${summary}${status}"
+  fi
+}
+
+# Diff 1: Working tree vs Template HEAD
+if [[ "$working_file_exists" == "true" && "$template_head_exists" == "true" ]]; then
+  compute_diff "$tmp_working" "$tmp_template_head" "Working tree" "Template HEAD" "true"
+fi
+
+# Diff 2: Working tree vs App HEAD
+if [[ "$working_file_exists" == "true" && "$app_head_exists" == "true" ]]; then
+  compute_diff "$tmp_working" "$tmp_app_head" "Working tree" "App HEAD" "true"
+fi
+
+# Diff 3: Template HEAD vs App HEAD (show ahead/behind status)
+if [[ "$template_head_exists" == "true" && "$app_head_exists" == "true" ]]; then
+  compute_diff "$tmp_template_head" "$tmp_app_head" "Template HEAD" "App HEAD" "true"
+fi
+
+# Cleanup
+rm -f "$tmp_working" "$tmp_template_head" "$tmp_app_head"
+echo
 
 }  # end of inspect()
