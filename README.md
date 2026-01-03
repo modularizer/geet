@@ -25,6 +25,9 @@ Only Git's *view* of the filesystem changes.
 - submodules don't support interleaving files and folders of template code with custom app code
 - I want to simultaneously develop many apps with a similar architecture
 
+## Why Not?
+> If you can super cleanly separate your template from your app or make your sourcecode fully modular, you don't need geet, use a normal repo or maybe submodules.
+
 ---
 ## PreReqs
 1. `git` - for pretty much everything

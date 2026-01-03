@@ -15,7 +15,17 @@ shift || true
 case "$cmd" in
   help|-h|--help)
     source "$GEET_LIB/help.sh"
-    help
+    help "${GEET_ARGS[@]:1}"
+    ;;
+
+  why)
+    source "$GEET_LIB/why.sh"
+    why
+    ;;
+
+  whynot)
+    source "$GEET_LIB/why.sh"
+    whynot
     ;;
 
   sync)

@@ -7,47 +7,66 @@ help() {
 
 # digest-and-locate.sh provides: GEET_ALIAS, TEMPLATE_NAME, die, log
 
+if [[ "${1:-}" == "--all" ]]; then
 cat <<EOF
-$GEET_ALIAS — Git-based template layering system
-
-Usage: $GEET_ALIAS <command> [args...]
+$GEET_ALIAS — Git-based template layering system (see https://github.com/modularizer/geet)
 
 TEMPLATE MANAGEMENT:
-  template <name> [desc]    Create a new template layer from current app
-  init                      Initialize a freshly-cloned template repo as your app
-  install <repo>            Clone a template repo and initialize it (clone + init)
-  clone <repo>              Clone a git repository (standard git clone)
+  template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
+  init                                                   Initialize a freshly-cloned template repo as your app
+  install <repo> <dir> [--public|--private|--internal]  Clone a template repo and initialize it
 
 FILE MANAGEMENT:
-  tree [list|tracked|all]   Show what files the template includes
-  split <dest> [mode]       Export template files to external folder
-  sync                      Compile .geetinclude whitelist into .geetexclude
-  detach                    "Detach" a file, folder, or glob to always use "keep-ours" to resolve merge conflicts, essentially allowing you to overwrite a file's template
-  retach                    undo a detach command
-  detached                  list files that have been detached
+  tree [list|tracked|all]                                Show what files the template includes
+  split <dest> [mode]                                    Export template files to external folder
+  sync                                                   Compile .geetinclude whitelist into .geetexclude
+  include <path>                                         Manage included files
+  ignored|included|excluded <path>                       Check if a path is ignored/included/excluded
+
+DETACHMENT (CONFLICT RESOLUTION):
+  detach|hard-detach <path>                              Detach a file to always use "keep-ours" on merge conflicts
+  soft-detach|soft_detach|slide <path>                   Soft detach (lighter alternative)
+  detached                                               List hard-detached files
+  soft-detached|soft_detached|slid                       List soft-detached files
+  retach <path>                                          Undo a detach command
 
 OPERATIONS:
-  session run [opts] -- cmd Run command in isolated template snapshot
-  publish [opts]            Publish template to GitHub (auto-detects repo name)
-  gh <subcommand> [...]     GitHub CLI integration (pr, issue, etc.)
-  doctor                    Run health checks on your geet setup
+  session <subcommand>                                   Run commands in isolated template snapshot
+  publish|pub [opts]                                     Publish template to GitHub
+  gh <subcommand>                                        GitHub CLI integration (pr, issue, etc.)
+  doctor                                                 Run health checks on your geet setup
+  prework                                                See what we know
+  precommit|pc                                           Run pre-commit hook
+
+UTILITIES:
+  why                                                    Reasons to use geet
+  whynot                                                 Reasons not to use geet
+  bug|feature|issue|whoops|suggest                       Open an issue on GitHub
+  remove|rm                                              Remove template tracking (requires confirmation)
+  destroy                                                Remove template tracking (no confirmation)
 
 GIT ACCESS:
-  git <command> [...]       Direct git access to template repo
-  <git-command> [...]       Any git command (auto-forwarded to template repo)
-
-Get help on any command:
-  $GEET_ALIAS <command> --help
-
-Examples:
-  $GEET_ALIAS template my-stack "A modern web stack"
-  $GEET_ALIAS install https://github.com/user/template-repo
-  $GEET_ALIAS tree list
-  $GEET_ALIAS publish --public
-  $GEET_ALIAS status
-  $GEET_ALIAS commit -m "Update template"
+  git <command> [...]                                    Direct git access to template repo
+  <git-command> [...]                                    Any git command (auto-forwarded to template repo)
 
 Current layer: ${TEMPLATE_NAME:-none}
 EOF
+else
+cat <<EOF
+$GEET_ALIAS — Git-based template layering system (see https://github.com/modularizer/geet)
+
+USAGE:
+  template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
+  install  <repo> <dir>  [--public|--private|--internal] Do a git clone of a repo and convert it into a repo of your own
+  tree [list|tracked|all]                                Show what files the template includes
+  split <dest> [mode]                                    Export template files to external folder
+  prework                                                See what we know
+  why / whynot                                           Reasons to (or not to) use geet
+  help --all                                             Show all available commands
+  <git-command> [...]                                    Any git command (auto-forwarded to template repo)
+
+Current layer: ${TEMPLATE_NAME:-none}
+EOF
+fi
 
 }  # end of help()
