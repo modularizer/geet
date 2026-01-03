@@ -65,14 +65,16 @@ case "$cmd" in
     ;;
 
   pub|publish)
-    GEET_ARGS="${GEET_ARGS[@]:1}"
+    GEET_ARGS=("${GEET_ARGS[@]:1}")
     source "$GEET_LIB/ghcli.sh"
-    ghcli publish "${GEET_ARGS[@]}"
+    publish_cmd "${GEET_ARGS[@]}"
     ;;
 
   install)
     source "$GEET_LIB/git.sh"
-    install "${GEET_ARGS[@]:1}"
+    source "$GEET_LIB/install.sh"
+    GEET_ARGS=("${GEET_ARGS[@]:1}")
+    install "${GEET_ARGS[@]}"
     ;;
 
   soft-detach|soft_detach|slide)
@@ -135,7 +137,7 @@ case "$cmd" in
     include "${GEET_ARGS[@]:1}"
     ;;
 
-  ignored)
+  ignored|included|excluded)
     source "$GEET_LIB/ignored.sh"
     echo "$(is_ignored "${GEET_ARGS[@]:1}")"
     ;;

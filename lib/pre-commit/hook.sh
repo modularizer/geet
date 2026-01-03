@@ -7,8 +7,8 @@ set -euo pipefail
 #echo "HOOK GIT_INDEX_FILE=${GIT_INDEX_FILE-<unset>}" >&2
 DOTGIT="$(dirname -- $GIT_INDEX_FILE)"
 TEMPLATE_DIR="$(dirname -- "$DOTGIT")"
-GEET_CMD="$(command -v geet)"
-NODE_BIN="$(cd -- "$(dirname -- "${GEET_CMD}")" && pwd)"
+_GEET_CMD="$(command -v geet)"
+NODE_BIN="$(cd -- "$(dirname -- "${_GEET_CMD}")" && pwd)"
 GEET_LIB="$(cd -- "$NODE_BIN/../lib/node_modules/geet-geet/lib" && pwd)"
 SOFT_DETACHED="$DOTGIT/info/geet-protected"
 source "$TEMPLATE_DIR/template-config.env"

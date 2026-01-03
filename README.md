@@ -26,6 +26,13 @@ Only Git's *view* of the filesystem changes.
 - I want to simultaneously develop many apps with a similar architecture
 
 ---
+## PreReqs
+1. `git` - for pretty much everything
+2. `npm` - really just for installing `geet` globally
+3. `gh` - for use of `publish` command and `--publish`, `--private`, `--internal` flags
+
+
+---
 
 ## Quickstart
 ```bash

@@ -57,6 +57,7 @@ EOF
   return 0
 fi
 
+
 has_flag --skip-post SKIP_POST_INIT
 
 ###############################################################################
@@ -114,28 +115,12 @@ if [[ ! -d "$APP_GIT" ]]; then
 fi
 
 # Create layer directory if missing (should exist because this script is inside it)
+log "making $TEMPLATE_DIR"
 mkdir -p "$TEMPLATE_DIR"
 
 log "moving $APP_GIT to $DOTGIT"
 mv "$APP_GIT" "$DOTGIT"
 
-###############################################################################
-# INSTALL DEFAULT WHITELIST (FIRST RUN ONLY)
-###############################################################################
-
-GITINCLUDE_SAMPLE="$TEMPLATE_DIR/geetinclude.sample"
-
-if [[ ! -f "$TEMPLATE_DIR/.geetinclude" ]]; then
-  if [[ -f "$GITINCLUDE_SAMPLE" ]]; then
-    log "installing default whitelist:"
-    log "  $GITINCLUDE_SAMPLE -> $TEMPLATE_DIR/.geetinclude"
-    cp "$GITINCLUDE_SAMPLE" "$TEMPLATE_DIR/.geetinclude"
-  else
-    log "no .geetinclude or geetinclude.sample found (whitelist left empty)"
-  fi
-else
-  log "whitelist already exists: .geetinclude"
-fi
 
 ###############################################################################
 # CREATE NEW APP REPO
@@ -150,17 +135,6 @@ log "initializing new app repo at $APP_GIT"
 git -C "$APP_DIR" init >/dev/null
 
 ###############################################################################
-# POST-INIT: COMPILE WHITELIST / EXCLUDES
-###############################################################################
-
-# Sync whitelist rules (.geetinclude -> .geetexclude)
-if [[ -f "$GEET_LIB/sync.sh" ]]; then
-  log "syncing whitelist rules (.geetinclude -> .geetexclude)"
-  source "$GEET_LIB/sync.sh"
-  sync >/dev/null || true
-fi
-
-###############################################################################
 # ENSURE APP .geetexclude IGNORES dot-git/
 ###############################################################################
 
@@ -168,7 +142,7 @@ fi
 # to the app repo. Ensure it's in .gitignore.
 APP_GITIGNORE="$APP_DIR/.gitignore"
 DOTGIT_PATTERN="**/dot-git/"
-
+UNTRACKED_PATTERN="**/untracked-template-config.env"
 if [[ -f "$APP_GITIGNORE" ]]; then
   # Check if any form of dot-git ignore already exists
   if ! grep -Eq '(^|[[:space:]])((\*\*/)?dot-git/|\.geet/dot-git/)([[:space:]]|$)' "$APP_GITIGNORE"; then
@@ -177,11 +151,20 @@ if [[ -f "$APP_GITIGNORE" ]]; then
   else
     log "app .gitignore already ignores dot-git/"
   fi
+  if ! grep -Eq 'untracked-template-config.env' "$APP_GITIGNORE"; then
+      log "adding $UNTRACKED_PATTERN to app .gitignore"
+      echo "$UNTRACKED_PATTERN" >> "$APP_GITIGNORE"
+    else
+      log "app .gitignore already ignores untracked/"
+    fi
 else
   log "creating app .gitignore with $DOTGIT_PATTERN"
   echo "$DOTGIT_PATTERN" > "$APP_GITIGNORE"
 fi
 
+
+git add .
+git commit -m "initial commit"
 ###############################################################################
 # FINAL OUTPUT
 ###############################################################################

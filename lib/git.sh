@@ -49,7 +49,7 @@ call_cmd() {
       exit 1
   fi
   geet_git "$@"
-  if [[ "$1" == "status" ]]; then
-    log "Don't Panic! it is expected to see README.md and .gitignore show up as deleted, don't worry. read docs/AUTO_PROMOTE.md to understand why"
-  fi
+#  if [[ "$1" == "status" ]]; then
+#    log "Don't Panic! it is expected to see README.md and .gitignore show up as deleted, don't worry. read docs/AUTO_PROMOTE.md to understand why"
+#  fi
 }

@@ -88,13 +88,23 @@ DDD_TEMPLATE_NAME="mytemplate"
 TEMPLATE_NAME=""
 
 # Directory this script lives in (.geet/lib)
-GEET_LIB="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SRC="${BASH_SOURCE[0]}"
 
+GEET_ROOT="$(cd -- "$(dirname "$(dirname -- "$SRC")")" && pwd)"
+GEET_LIB="$GEET_ROOT/lib"
+GEET_BIN="$GEET_ROOT/bin"
+GEET_CMD="$GEET_ROOT/geet.sh"
 source "$GEET_LIB/flags.sh"
 source "$GEET_LIB/logger.sh"
-
 get_specified_level
 get_log_filter
+
+
+debug "SRC=$SRC"
+debug "GEET_ROOT=$GEET_ROOT"
+debug "GEET_ROOT=$GEET_ROOT"
+
+
 
 debug "original args: $@"
 debug "cleaned args: ${GEET_ARGS[@]}"
@@ -287,8 +297,7 @@ detect_template_dir_from_cwd() {
     printf '%s' ""
 }
 
-# Path to the geet wrapper command (in our package)
-GEET_CMD="$GEET_LIB/../bin/geet.sh"
+
 
 # Load global user preferences from package installation
 GEET_GLOBAL_CONFIG="$GEET_LIB/../config.env"

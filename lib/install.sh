@@ -114,11 +114,11 @@ EOF
   elif [[ "$repo" =~ ^[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-]+/?$ ]]; then
     # OPTION 4: username/repo format
     repo="${repo%/}"  # remove trailing slash if present
-    repo="https://github.com/${repo}.git"
+    repo="git@github.com:${repo}.git"
   elif [[ "$repo" =~ ^[a-zA-Z0-9_.-]+$ ]]; then
     # OPTION 5: just a repo name
     get_gh_user
-    repo="https://github.com/${GH_USER}/${repo}.git"
+    repo="git@github.com:${GH_USER}/${repo}.git"
   fi
 
   # Extract repo name for validation
@@ -139,22 +139,27 @@ EOF
   log "cloning template repo:"
   log "  repo: $repo"
   log "  dir:  $dir"
-  geet_git clone "${clone_args[@]}" "$repo" "$dir"
+  git clone "${clone_args[@]}" "$repo" "$dir"
+  log "calling \`cd \"$dir\"\`"
+  cd "$dir" || exit
+  log "pwd: $(pwd)"
+
+  GEET_CMD="${BASH_SOURCE[-1]}"
+  log "geet_cmd=$GEET_CMD"
 
   log "running init in cloned directory"
   (
-    cd "$dir"
-    "$GEET_CMD" init "${post_init_args[@]}"
+   "$GEET_CMD" init "${post_init_args[@]}"
   )
+  log "pwd: $(pwd)"
+  log "publish_visibility=$publish_visibility"
 
   # Publish the app as a GitHub repo if requested
   if [[ -n "$publish_visibility" ]]; then
-    log "publishing app as GitHub repo (--${publish_visibility})"
+    log "Calling \`$GEET_CMD publish app\`"
     (
-      cd "$dir"
-      gh repo create --source=. --${publish_visibility} --push
+       "$GEET_CMD" publish app "--${publish_visibility}"
     )
-    log "app published to GitHub"
   fi
 
   log "install complete"

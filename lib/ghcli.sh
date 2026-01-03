@@ -101,17 +101,16 @@ setup_cmd() {
 
 publish_app() {
   GEET_ARGS=("$@")
+
+  log "here in publish app with $APP_DIR and $APP_NAME"
   # Auto-setup if needed
   ensure_gh_ready
-
-  [[ -z "$APP_DIR" ]] && die "APP_DIR not set - cannot publish app"
-  [[ -z "$APP_NAME" ]] && die "APP_NAME not set - cannot publish app"
 
   # Get GitHub username
   get_gh_user
 
   log "publishing app repository to GitHub..."
-  log "  source: $APP_DIR"
+  log "  source: $APP_NAME"
   log "  name: $APP_NAME"
   log "  owner: $GH_USER"
 
@@ -156,7 +155,7 @@ publish_app() {
 
   # Add any extra args passed by user
   if [[ $# -gt 0 ]]; then
-    gh_args+=("$@")
+    gh_args+=("${GEET_ARGS[@]}")
   fi
 
   if [[ -n "$APP_HOMEPAGE" ]]; then
