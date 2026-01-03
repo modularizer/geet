@@ -38,34 +38,277 @@ else
   c_gray=""
 fi
 
+# Get concise status for a single file
+get_file_status() {
+  local file="$1"
+  local repo="$2"  # "template" or "app"
+
+  # Check if tracked
+  local is_tracked=false
+  if [[ "$repo" == "template" ]]; then
+    git --git-dir="$DOTGIT" --work-tree="$APP_DIR" ls-files --error-unmatch -- "$file" >/dev/null 2>&1 && is_tracked=true
+  else
+    git -C "$APP_DIR" ls-files --error-unmatch -- "$file" >/dev/null 2>&1 && is_tracked=true
+  fi
+
+  if [[ "$is_tracked" == "false" ]]; then
+    # Check if ignored/excluded
+    if [[ "$repo" == "template" ]]; then
+      if geet_git check-ignore -q -- "$file" 2>/dev/null; then
+        echo "excluded"
+        return
+      fi
+    else
+      if git -C "$APP_DIR" check-ignore -q -- "$file" 2>/dev/null; then
+        echo "ignored"
+        return
+      fi
+    fi
+    echo "untracked"
+    return
+  fi
+
+  # File is tracked - check detachment state (template only)
+  if [[ "$repo" == "template" ]]; then
+    # Check if hard-detached
+    local ls_v_output=$(git --git-dir="$DOTGIT" --work-tree="$APP_DIR" ls-files -v -- "$file" 2>/dev/null || echo "")
+    if [[ "$ls_v_output" =~ ^S ]]; then
+      echo "detached"
+      return
+    fi
+
+    # Check if soft-detached
+    local merge_attr=$(git --git-dir="$DOTGIT" --work-tree="$APP_DIR" check-attr merge -- "$file" 2>/dev/null | awk -F': ' '{print $3}')
+    if [[ "$merge_attr" == "keep-ours" ]]; then
+      echo "slid"
+      return
+    fi
+  fi
+
+  # Check if modified
+  local status_output=""
+  if [[ "$repo" == "template" ]]; then
+    status_output=$(git --git-dir="$DOTGIT" --work-tree="$APP_DIR" status --porcelain -- "$file" 2>/dev/null || echo "")
+  else
+    status_output=$(git -C "$APP_DIR" status --porcelain -- "$file" 2>/dev/null || echo "")
+  fi
+
+  if [[ -z "$status_output" ]]; then
+    echo "clean"
+  else
+    local status_code="${status_output:0:2}"
+    case "$status_code" in
+      " M"|"M "|"MM") echo "modified" ;;
+      " D"|"D "|"DD") echo "deleted" ;;
+      "A "|"AM") echo "added" ;;
+      *) echo "modified" ;;
+    esac
+  fi
+}
+
+# Inspect a directory and show summary for all files (recursive)
+inspect_directory() {
+  local dir="$1"
+
+  echo
+  echo "${c_bold}Inspecting directory (recursive):${c_reset} $dir"
+  echo
+  printf "%-60s %-15s %-15s\n" "File" "Template" "App"
+  printf "%-60s %-15s %-15s\n" "----" "--------" "---"
+
+  # Collect files from all three sources: template HEAD, app HEAD, and working tree
+  local all_files=$(
+    {
+      # Files from template repo HEAD
+      if [[ -d "$DOTGIT" ]]; then
+        geet_git ls-files 2>/dev/null | grep "^${dir}" || true
+      fi
+      # Files from app repo HEAD
+      if [[ -d "$APP_DIR/.git" ]]; then
+        git -C "$APP_DIR" ls-files 2>/dev/null | grep "^${dir}" || true
+      fi
+      # Files from working tree (excluding .git and dot-git directories)
+      find "$APP_DIR/$dir" -type d \( -name .git -o -name dot-git \) -prune -o -type f -print 2>/dev/null | sed "s|^$APP_DIR/||; s|^\./||" || true
+    } | sort -u
+  )
+
+  # Process each unique file
+  while IFS= read -r rel_path; do
+    [[ -z "$rel_path" ]] && continue
+
+    # Get status for both repos
+    local template_status=$(get_file_status "$rel_path" "template")
+    local app_status=$(get_file_status "$rel_path" "app")
+
+    # Color code the status
+    local template_colored=""
+    local app_colored=""
+
+    case "$template_status" in
+      clean) template_colored="${c_green}clean${c_reset}" ;;
+      modified) template_colored="${c_yellow}modified${c_reset}" ;;
+      detached) template_colored="${c_yellow}detached${c_reset}" ;;
+      slid) template_colored="${c_cyan}slid${c_reset}" ;;
+      excluded) template_colored="${c_gray}excluded${c_reset}" ;;
+      untracked) template_colored="${c_red}untracked${c_reset}" ;;
+      deleted) template_colored="${c_red}deleted${c_reset}" ;;
+      *) template_colored="$template_status" ;;
+    esac
+
+    case "$app_status" in
+      clean) app_colored="${c_green}clean${c_reset}" ;;
+      modified) app_colored="${c_yellow}modified${c_reset}" ;;
+      ignored) app_colored="${c_gray}ignored${c_reset}" ;;
+      untracked) app_colored="${c_red}untracked${c_reset}" ;;
+      deleted) app_colored="${c_red}deleted${c_reset}" ;;
+      *) app_colored="$app_status" ;;
+    esac
+
+    # Skip files that are excluded by template AND ignored by app
+    [[ "$template_status" == "excluded" && "$app_status" == "ignored" ]] && continue
+
+    printf "%-60s %-24s %-24s\n" "$rel_path" "$template_colored" "$app_colored"
+  done <<< "$all_files"
+
+  echo
+}
+
+# Inspect files matching a glob pattern
+inspect_glob() {
+  local pattern="$1"
+
+  echo
+  echo "${c_bold}Inspecting pattern:${c_reset} $pattern"
+  echo
+  printf "%-60s %-15s %-15s\n" "File" "Template" "App"
+  printf "%-60s %-15s %-15s\n" "----" "--------" "---"
+
+  # Collect files from all three sources: template HEAD, app HEAD, and working tree
+  local all_files=$(
+    {
+      # Files from template repo HEAD matching pattern
+      if [[ -d "$DOTGIT" ]]; then
+        geet_git ls-files 2>/dev/null | while IFS= read -r file; do
+          # Use bash pattern matching
+          shopt -s globstar nullglob
+          case "$file" in
+            $pattern) echo "$file" ;;
+          esac
+          shopt -u globstar nullglob
+        done
+      fi
+      # Files from app repo HEAD matching pattern
+      if [[ -d "$APP_DIR/.git" ]]; then
+        git -C "$APP_DIR" ls-files 2>/dev/null | while IFS= read -r file; do
+          shopt -s globstar nullglob
+          case "$file" in
+            $pattern) echo "$file" ;;
+          esac
+          shopt -u globstar nullglob
+        done
+      fi
+      # Files from working tree matching pattern
+      shopt -s nullglob globstar
+      for f in $APP_DIR/$pattern; do
+        if [[ -f "$f" ]]; then
+          local path="${f#$APP_DIR/}"
+          path="${path#./}"
+          echo "$path"
+        fi
+      done
+      shopt -u nullglob globstar
+    } | sort -u
+  )
+
+  # Process each unique file
+  while IFS= read -r rel_path; do
+    [[ -z "$rel_path" ]] && continue
+
+    # Get status for both repos
+    local template_status=$(get_file_status "$rel_path" "template")
+    local app_status=$(get_file_status "$rel_path" "app")
+
+    # Color code the status
+    local template_colored=""
+    local app_colored=""
+
+    case "$template_status" in
+      clean) template_colored="${c_green}clean${c_reset}" ;;
+      modified) template_colored="${c_yellow}modified${c_reset}" ;;
+      detached) template_colored="${c_yellow}detached${c_reset}" ;;
+      slid) template_colored="${c_cyan}slid${c_reset}" ;;
+      excluded) template_colored="${c_gray}excluded${c_reset}" ;;
+      untracked) template_colored="${c_red}untracked${c_reset}" ;;
+      deleted) template_colored="${c_red}deleted${c_reset}" ;;
+      *) template_colored="$template_status" ;;
+    esac
+
+    case "$app_status" in
+      clean) app_colored="${c_green}clean${c_reset}" ;;
+      modified) app_colored="${c_yellow}modified${c_reset}" ;;
+      ignored) app_colored="${c_gray}ignored${c_reset}" ;;
+      untracked) app_colored="${c_red}untracked${c_reset}" ;;
+      deleted) app_colored="${c_red}deleted${c_reset}" ;;
+      *) app_colored="$app_status" ;;
+    esac
+
+    # Skip files that are excluded by template AND ignored by app
+    [[ "$template_status" == "excluded" && "$app_status" == "ignored" ]] && continue
+
+    printf "%-60s %-24s %-24s\n" "$rel_path" "$template_colored" "$app_colored"
+  done <<< "$all_files"
+
+  echo
+}
+
 usage() {
   cat <<EOF
 $GEET_ALIAS inspect — inspect which layer tracks a file and its git status
 
-Given a file path, tells you which layer tracks it and what Git thinks about it.
+Given a file path, shows detailed inspection with tracking status, commits, and diffs.
+Given a directory path, shows summary table of all files (recursive).
+Given a glob pattern, shows summary table of all matching files.
 
 Usage:
-  $GEET_ALIAS inspect <path>
+  $GEET_ALIAS inspect <path|pattern>
 
 Examples:
-  $GEET_ALIAS inspect src/auth/login.ts
-  $GEET_ALIAS inspect README.md
+  $GEET_ALIAS inspect README.md         # detailed single file view
+  $GEET_ALIAS inspect lib/              # recursive directory summary
+  $GEET_ALIAS inspect "**/*.md"         # all .md files recursively
+  $GEET_ALIAS inspect "lib/*.sh"        # glob pattern in lib/
+  $GEET_ALIAS inspect .                 # entire project (recursive)
   $GEET_ALIAS inspect --help
 
-Output includes:
+Single file output includes:
 - File modification time (mtime)
 - Tracking status (tracked|excluded|ignored|untracked) for both repos
 - Detachment state for template repo (attached|slid|detached)
 - Last commit hash and commit time for each repo
 - Git status (clean|modified|deleted|added)
-- Diff summary when tracked in both repos (identical or +X -Y lines)
-- Color-coded indicators:
-  - Green: tracked, attached, clean, identical
-  - Yellow: excluded (template), ignored (app), modified, detached, diff
-  - Cyan: slid, added
+- Content comparison across all three states (working tree, template HEAD, app HEAD)
+- Pairwise diffs showing ahead/behind/diverged status
+
+Directory/glob output shows one line per file from all three sources:
+- Template HEAD (via geet git ls-files)
+- App HEAD (via git ls-files)
+- Working tree (filesystem)
+
+Status indicators:
+- Template: clean|modified|detached|slid|excluded|untracked|deleted
+- App: clean|modified|ignored|untracked|deleted
+
+Color coding:
+  - Green: clean
+  - Yellow: modified, detached
+  - Cyan: slid
   - Red: untracked, deleted
-  - Gray: metadata (times, commits)
-- Informational note when file is tracked in both layers
+  - Gray: excluded, ignored
+
+Notes:
+- Directory/glob inspection excludes .git and dot-git directories
+- Files that are excluded by template AND ignored by app are hidden
+- Use quotes around glob patterns to prevent shell expansion
 EOF
 }
 
@@ -84,6 +327,18 @@ fi
 
 # Strip leading ./ if present
 path="${path#./}"
+
+# Check if path is a directory - if so, show summary for all files
+if [[ -d "$APP_DIR/$path" ]]; then
+  inspect_directory "$path"
+  return 0
+fi
+
+# Check if path contains glob characters - if so, treat as pattern
+if [[ "$path" == *"*"* || "$path" == *"?"* || "$path" == *"["* ]]; then
+  inspect_glob "$path"
+  return 0
+fi
 
 echo
 echo "${c_bold}Path:${c_reset} $path"
