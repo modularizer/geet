@@ -1,4 +1,4 @@
-# 5. Contributing to geet
+# Contributing to geet
 
 ## Development setup
 
@@ -6,13 +6,7 @@
 # Clone the repo
 git clone https://github.com/modularizer/geet.git
 cd geet
-
-# The scripts are in lib/
-ls lib/
-
-# Test any script
-bash lib/doctor.sh help
-bash lib/ghcli.sh help
+npm install -g .
 ```
 
 ## Project structure
@@ -20,21 +14,33 @@ bash lib/ghcli.sh help
 ```text
 geet/
   lib/
-    cli.sh          # Main router
-    git.sh          # Git operations wrapper
-    init.sh         # Initialize layer
-    tree.sh         # Inspect layer contents
-    split.sh        # Export layer files
-    session.sh      # Isolated build helper
-    doctor.sh       # Health checks
-    gh.sh           # GitHub integration
-    template.sh     # Create new layer
+    detach.sh           # File detachment for conflict resolution
+    digest-and-locate.sh # Environment setup and routing
+    doctor.sh           # Health checks
+    flags.sh            # Flag parsing utilities
+    ghcli.sh            # GitHub CLI integration
+    git.sh              # Git operations wrapper
+    help.sh             # Help text and command listing
+    ignored.sh          # Check if files are ignored/included/excluded
+    include.sh          # Manage included files
+    init.sh             # Initialize layer
+    install.sh          # Clone and initialize templates
+    logger.sh           # Logging utilities
+    pre-commit          # Pre-commit hook
+    prework.sh          # Show environment info
+    session.sh          # Isolated build helper
+    split.sh            # Export layer files
+    sync.sh             # Compile .geetinclude to .geetexclude
+    template.sh         # Create new layer
+    tree.sh             # Inspect layer contents
+    version.sh          # Version display
+    whoops.sh           # Open GitHub issues
+    why.sh              # Show reasons to use/not use geet
 
   bin/
-    geet.sh         # npm executable wrapper
+    geet.sh             # Main router and npm executable wrapper
 
-  geetinclude.sample   # Whitelist example
-  package.json         # npm package config
+  package.json          # npm package config
 ```
 
 ## Architecture principles
@@ -57,16 +63,26 @@ geet/
 - Document non-obvious behavior
 - Validate inputs early
 - Fail fast with clear errors
+- Use `source` a lot
+- Use `digest-and-locate.sh` for variable definitions and things that all scripts need access to
+- Use `has_flag`, `extract_flag`, `log`, and `debug` heavily
 
 ## Testing changes
 
 ```bash
 # Run doctor to check for issues
-bash lib/doctor.sh
+geet doctor
+
+# Test the main executable
+geet help
+geet doctor
 
 # Test in a real project
 cd /path/to/test-project
-/path/to/geet/lib/cli.sh doctor
+/path/to/geet/bin/geet.sh doctor
+
+# Or if installed globally
+geet doctor
 ```
 
 ## Common tasks
@@ -74,8 +90,8 @@ cd /path/to/test-project
 ### Adding a new command
 
 1. Create `lib/mycommand.sh`
-2. Add to `lib/cli.sh` router
-3. Update help text
+2. Add to `bin/geet.sh` router
+3. Update help text in `lib/help.sh`
 4. Test thoroughly
 
 ### Updating documentation
@@ -127,16 +143,18 @@ This system is intentionally small, explicit, and evolvable.
 It will grow **only** when real workflows demand it.
 
 Core features:
-- ✅ Cloning templates
-- ✅ Init workflow
+- ✅ Template creation and initialization
+- ✅ Install workflow (clone + init)
 - ✅ Layered templates
-- ✅ Include/exclude modes
-- ✅ Introspection tools
-- ✅ Export functionality
+- ✅ Include/exclude modes with sync
+- ✅ File detachment (hard and soft)
+- ✅ Introspection tools (tree, prework)
+- ✅ Export functionality (split)
 - ✅ Build sessions
 - ✅ Safety rails
-- ✅ Post-init hooks
-- ✅ GitHub integration
+- ✅ Pre-commit hooks
+- ✅ GitHub CLI integration (publish, pr, issues)
 - ✅ Multi-layer support
+- ✅ Doctor health checks
 
 That's the core. Everything else is optional.
