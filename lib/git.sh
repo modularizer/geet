@@ -48,11 +48,8 @@ call_cmd() {
       log "Just run \`$GEET_ALIAS pub\` to publish as a public repo or \`$GEET_ALIAS publish --private\`"
       exit 1
   fi
-  rc="$(geet_git "$@")"
+  geet_git "$@"
   if [[ "$1" == "status" ]]; then
     log "Don't Panic! it is expected to see README.md and .gitignore show up as deleted, don't worry. read docs/AUTO_PROMOTE.md to understand why"
-  fi
-  if [[ rc ]] && [[ "$1" == "push" ]]; then
-    echo ""
   fi
 }

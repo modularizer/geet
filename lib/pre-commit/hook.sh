@@ -53,4 +53,14 @@ for f in "$GEET_LIB"/pre-commit/*.sh; do
 done
 shopt -u nullglob
 
+
+
+echo "checking for user-define hooks in $TEMPLATE_DIR/pre-commit..."
+shopt -s nullglob
+for f in "$TEMPLATE_DIR"/pre-commit/*.sh; do
+  echo "sourcing $f ..."
+  source "$f"
+done
+shopt -u nullglob
+
 echo "made it through precommit!"

@@ -48,6 +48,92 @@ _color_scope() {
 
 _color_reset() { printf '\033[0m'; }
 
+# Feature toggles - set to true/false to enable/disable message colorization
+COLORIZE_BACKTICKS=true
+COLORIZE_BACKTICKS_MODE="bold"  # Options: normal|bold|highlight|italic
+COLORIZE_COMMENTS=true
+
+# Colorize message text: backticks and comments
+# $1 = text to colorize
+# $2 = color to restore after backticks (optional, defaults to reset)
+_colorize_message() {
+  local text="$1"
+  local restore_color="${2:-$'\033[0m'}"
+
+  # Define color codes
+  local grey=$'\033[90m'
+  local reset=$'\033[0m'
+
+  # Set highlight codes based on mode
+  local highlight unhighlight
+  case "${COLORIZE_BACKTICKS_MODE}" in
+    bold)
+      highlight=$'\033[1m'       # Bold text
+      unhighlight=$'\033[22m'    # Turn off bold
+      ;;
+    highlight)
+      highlight=$'\033[7m'       # Reverse video
+      unhighlight=$'\033[27m'    # Turn off reverse video
+      ;;
+    italic)
+      highlight=$'\033[3m'       # Italic text
+      unhighlight=$'\033[23m'    # Turn off italic
+      ;;
+    normal|*)
+      highlight=""               # No styling
+      unhighlight=""             # No styling
+      ;;
+  esac
+
+  # First, handle comments: everything after # becomes grey
+  # We need to handle this before backticks to avoid conflicts
+  if [[ "$COLORIZE_COMMENTS" == true ]] && [[ "$text" =~ (#.*)$ ]]; then
+    local before="${text%#*}"
+    local comment="${BASH_REMATCH[1]}"
+    text="${before}${grey}${comment}${reset}"
+  fi
+
+  # Then handle backticks: replace `text` with highlight (reverse video)
+  # Remove the backticks themselves, just colorize the content
+  local result=""
+  local remainder="$text"
+  local in_backtick=false
+
+  if [[ "$COLORIZE_BACKTICKS" == true ]]; then
+    while [[ -n "$remainder" ]]; do
+      if [[ "$remainder" =~ ^([^\`]*)\`(.*)$ ]]; then
+        # Found a backtick
+        result="${result}${BASH_REMATCH[1]}"
+        remainder="${BASH_REMATCH[2]}"
+
+        if [[ "$in_backtick" == false ]]; then
+          # Start backtick - don't include the ` character, just add highlight
+          result="${result}${highlight}"
+          in_backtick=true
+        else
+          # End backtick - don't include the ` character, turn off reverse video
+          result="${result}${unhighlight}"
+          in_backtick=false
+        fi
+      else
+        # No more backticks
+        result="${result}${remainder}"
+        break
+      fi
+    done
+
+    # Close any unclosed backtick
+    if [[ "$in_backtick" == true ]]; then
+      result="${result}${unhighlight}"
+    fi
+  else
+    # Backtick colorization disabled - just use text as-is
+    result="$remainder"
+  fi
+
+  printf "%s" "$result"
+}
+
 # Return an ANSI color code for a level, based on COLOR_MODE
 _color_for_level() {
   local level="$1"
@@ -134,23 +220,38 @@ log_with_level() {
 
 
   # Colorize only the level prefix (keeps the rest readable)
-    if _color_enabled && [[ "$SHOW_LEVEL" == "true" ]]; then
-      local c r scope
-      c="$(_color_for_level "$level")"
-      r="$(_color_reset)"
-      scope="$(_color_scope)"
+  if _color_enabled && [[ "$SHOW_LEVEL" == "true" ]]; then
+    local c r scope
+    c="$(_color_for_level "$level")"
+    r="$(_color_reset)"
+    scope="$(_color_scope)"
 
-      case "$scope" in
-        line)
-          echo "${c}${plain}${r}" >&2
-          ;;
-        level)
-          echo "${c}${level_prefix}${r}${template_label}${msg}" >&2
-          ;;
-      esac
+    case "$scope" in
+      line)
+        # For line scope, colorize the entire line including level
+        # Pass line color so backticks restore to it
+        local colored_plain
+        colored_plain="$(_colorize_message "$plain" "$c")"
+        echo "${c}${colored_plain}${r}" >&2
+        ;;
+      level)
+        # For level scope, colorize level prefix and message separately
+        # Message isn't colored by level, so backticks restore to default
+        local colored_msg
+        colored_msg="$(_colorize_message "${template_label}${pre}${msg}")"
+        echo "${c}${level_prefix}${r}${colored_msg}" >&2
+        ;;
+    esac
+  else
+    # No level coloring, but still apply message coloring if enabled
+    if _color_enabled; then
+      local colored_full
+      colored_full="$(_colorize_message "$plain")"
+      echo "$colored_full" >&2
     else
       echo "$plain" >&2
     fi
+  fi
 
 }
 

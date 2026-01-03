@@ -65,21 +65,20 @@ git commit -m "Minimal Expo Router sample with multiple routes"
 
 ### Step 2: Initialize the template layer
 ```bash
-geet template mytemplate "just a demo template"
+#make a template git repo and publish to github
+geet template mytemplate "just a demo template" --private
 
 # Add some of the app files to the template layer (geet include modifies the .geetinclude then calls geet add)
 geet include "app/index.tsx" "app/_layout.tsx" "app/about.tsx"
 geet commit -m "Initial template layer"
-
-# Push to GitHub
- geet pub
+geet push
 ```
 
 ### Step 3: Use the template in a new app
 
 ```bash
 # Clone and set up the template
-geet install <your-github-username>/mytemplate MyApp
+geet install <your-github-username>/mytemplate MyApp2
 ```
 
 ### Step 3: Customize your app

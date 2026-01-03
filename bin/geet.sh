@@ -61,22 +61,13 @@ case "$cmd" in
 
   gh)
     source "$GEET_LIB/ghcli.sh"
-    ghcli "${GEET_ARGS[@]:1}"
+    handle "${GEET_ARGS[@]:1}"
     ;;
 
-  pri)
-      source "$GEET_LIB/ghcli.sh"
-      ghcli publish "${GEET_ARGS[@]:1}" --private
-      ;;
-
-  internal)
-      source "$GEET_LIB/ghcli.sh"
-      ghcli publish "${GEET_ARGS[@]:1}" --internal
-      ;;
-
-  pub)
+  pub|publish)
+    GEET_ARGS="${GEET_ARGS[@]:1}"
     source "$GEET_LIB/ghcli.sh"
-    ghcli publish "${GEET_ARGS[@]:1}"
+    ghcli publish "${GEET_ARGS[@]}"
     ;;
 
   install)

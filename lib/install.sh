@@ -54,9 +54,9 @@ EOF
   local INT_APP=""
 
   has_flag --recurse-submodules RECURSE
-  has_flag --pub PUB_APP
-  has_flag --pri PRI_APP
-  has_flag --int INT_APP
+  has_flag --public PUB_APP
+  has_flag --private PRI_APP
+  has_flag --internal INT_APP
 
   # Determine publish visibility
   local publish_visibility=""
