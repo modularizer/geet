@@ -18,6 +18,11 @@ case "$cmd" in
     help "${GEET_ARGS[@]:1}"
     ;;
 
+  version|-v|--version)
+    source "$GEET_LIB/version.sh"
+    version
+    ;;
+
   why)
     source "$GEET_LIB/why.sh"
     why

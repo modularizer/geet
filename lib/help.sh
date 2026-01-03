@@ -39,6 +39,7 @@ OPERATIONS:
   precommit|pc                                           Run pre-commit hook
 
 UTILITIES:
+  version|--version|-v                                   Show geet version
   why                                                    Reasons to use geet
   whynot                                                 Reasons not to use geet
   bug|feature|issue|whoops|suggest                       Open an issue on GitHub
@@ -62,6 +63,7 @@ USAGE:
   split <dest> [mode]                                    Export template files to external folder
   prework                                                See what we know
   why / whynot                                           Reasons to (or not to) use geet
+  version / --version                                    Show geet version
   help --all                                             Show all available commands
   <git-command> [...]                                    Any git command (auto-forwarded to template repo)
 
