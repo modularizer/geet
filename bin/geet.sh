@@ -64,7 +64,17 @@ case "$cmd" in
     ghcli "${GEET_ARGS[@]:1}"
     ;;
 
-  publish)
+  pri)
+      source "$GEET_LIB/ghcli.sh"
+      ghcli publish "${GEET_ARGS[@]:1}" --private
+      ;;
+
+  internal)
+      source "$GEET_LIB/ghcli.sh"
+      ghcli publish "${GEET_ARGS[@]:1}" --internal
+      ;;
+
+  pub)
     source "$GEET_LIB/ghcli.sh"
     ghcli publish "${GEET_ARGS[@]:1}"
     ;;
@@ -127,6 +137,16 @@ case "$cmd" in
   git)
     source "$GEET_LIB/git.sh"
     call_cmd "${GEET_ARGS[@]:1}"
+    ;;
+
+  include)
+    source "$GEET_LIB/include.sh"
+    include "${GEET_ARGS[@]:1}"
+    ;;
+
+  ignored)
+    source "$GEET_LIB/ignored.sh"
+    echo "$(is_ignored "${GEET_ARGS[@]:1}")"
     ;;
 
   # Default: assume git subcommand

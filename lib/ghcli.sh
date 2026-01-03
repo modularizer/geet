@@ -112,6 +112,18 @@ publish_cmd() {
   log "  source: $APP_DIR"
   log "  default name: $default_repo_name"
 
+  TEMPLATE_HOMEPAGE=${TEMPLATE_HOMEPAGE:-};
+  TEMPLATE_DESC=${TEMPLATE_DESC:-};
+  TEMPLATE_TOPICS=${TEMPLATE_TOPICS:-"geet,template"};
+  extract_flag --topics _TOPICS
+  extract_flag --homepage _HOMEPAGE
+  extract_flag --desc _DESC
+
+  [[ -n "$_DESC" ]] && TEMPLATE_DESC="$_DESC";
+  [[ -n "$_HOMEPAGE" ]] && TEMPLATE_HOMEPAGE="$_HOMEPAGE";
+  [[ -n "$_TOPICS" ]] && TEMPLATE_TOPICS="$_TOPICS";
+
+
   # Build args for gh repo create
   # Default: --source . --push --confirm
   local -a gh_args=(
@@ -120,6 +132,8 @@ publish_cmd() {
     "$default_repo_name"
     --source
     .
+    --description
+    "$TEMPLATE_DESC"
     --push
   )
 
@@ -128,10 +142,18 @@ publish_cmd() {
     gh_args+=("$@")
   fi
 
+  if [[ -n "$TEMPLATE_HOMEPAGE" ]]; then
+    gh_args+=("--homepage")
+    gh_args+=("$TEMPLATE_HOMEPAGE")
+  fi
+
+
   # Run gh repo create from the ROOT directory
   (
     cd "$APP_DIR"
     gh "${gh_args[@]}"
+    gh repo edit "$default_repo_name" --template
+    gh repo edit "$default_repo_name" --add-topic "$TEMPLATE_TOPICS"
   )
 
   log "repository published successfully"
@@ -151,9 +173,8 @@ Commands:
   help       Show this help
 
 Examples:
-  $GEET_ALIAS gh publish                    # Auto-setup if needed, then publish
-  $GEET_ALIAS gh publish --public
-  $GEET_ALIAS gh publish --private --description "My cool project"
+  $GEET_ALIAS pub                  # Auto-setup if needed, then publish
+  $GEET_ALIAS publish --private --description "My cool project"
   $GEET_ALIAS gh pr list                    # Auto-setup if needed, then list PRs
   $GEET_ALIAS gh repo view
 
@@ -178,7 +199,7 @@ case "$cmd" in
     setup_cmd "$@"
     ;;
 
-  publish)
+  pub)
     publish_cmd "$@"
     ;;
 

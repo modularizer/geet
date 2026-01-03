@@ -18,20 +18,12 @@ need_dotgit() {
   [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]] || die "missing $DOTGIT (run: $GEET_ALIAS init)"
 }
 
-# Helper: block dangerous git commands
-block_footguns() {
-  case "${1-}" in
-    clean|reset|checkout|restore|rm)
-      brave_guard "git $1" "git $1 can be destructive and mess with your app's working directory"
-    ;;
-  esac
-}
 
 ###############################################################################
 # CLONE - Simple git clone without init
 ###############################################################################
 # Just clones a repository without running any post-install logic
-call_cmd() {
+include() {
   if [[ -z "$TEMPLATE_DIR" ]]; then
     critical "We could not find your template repo anywhere in this project!"
     warn "Are you sure you are somewhere inside a project which has a template repo?"
@@ -42,17 +34,21 @@ call_cmd() {
   fi
   need_dotgit
   sync_exclude
-  block_footguns "$@"
-  if [[ "$1" == "push" ]] && ! [[ "$(geet_git remote -v)" ]]; then
-      log "It looks like you have no remote setup yet. Would you like to publish on github?"
-      log "Just run \`$GEET_ALIAS pub\` to publish as a public repo or \`$GEET_ALIAS publish --private\`"
-      exit 1
-  fi
-  rc="$(geet_git "$@")"
-  if [[ "$1" == "status" ]]; then
-    log "Don't Panic! it is expected to see README.md and .gitignore show up as deleted, don't worry. read docs/AUTO_PROMOTE.md to understand why"
-  fi
-  if [[ rc ]] && [[ "$1" == "push" ]]; then
-    echo ""
-  fi
+  # first, modify .geetinclude
+  source "$GEET_LIB/ignored.sh"
+  for arg in "$@"; do
+    status="$(is_ignored $arg)"
+    debug "status of $arg is \"$status\""
+    if [[ "$status" == "ignored" ]]; then
+      echo "$arg" >> "$TEMPLATE_DIR/.geetinclude"
+      sync_exclude
+      status="$(is_ignored $arg)"
+      if [[ "$status" == "ignored" ]]; then
+          die "failed to unignore $arg"
+      fi
+    fi
+    geet_git add "$arg"
+  done
+
+
 }

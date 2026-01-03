@@ -62,7 +62,7 @@ Each layer:
 4. **Publish new template:**
    ```bash
    cd .mycompany
-   geet gh publish --public
+   geet gh pub
    ```
 
 5. **Others can now use your extended template:**

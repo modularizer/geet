@@ -1,4 +1,6 @@
 .claude/
 .idea/
 .vscode/
+config.env
 **/dot-git/
+**/untracked-template-config.env

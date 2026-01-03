@@ -262,26 +262,27 @@ cat > "$NEW_LAYER_DIR/parent.gitignore" <<EOFPGI
 EOFPGI
 debug "wrote" "$NEW_LAYER_DIR/parent.gitignore"
 # Helper functions to create .env files
-write_global_config() {
-  local target="$GEET_LIB/../config.env"
-  # Only create if it doesn't exist (don't overwrite user preferences)
-  if [[ -f "$target" ]]; then
-    debug "global config already exists at $target, skipping"
-    return 0
-  fi
-
-  cat > "$target" <<'EOF'
-# Geet Global User Preferences
-# This file contains global settings that apply to all geet operations
-# Edit these values to customize your geet experience
-
-SHOW_LEVEL=true
-COLOR_MODE=light
-COLOR_SCOPE=line
-EOF
-  log "created global config at $target"
-}
-
+#write_global_config() {
+#  local target="$GEET_LIB/../config.env"
+#  # Only create if it doesn't exist (don't overwrite user preferences)
+#  if [[ -f "$target" ]]; then
+#    debug "global config already exists at $target, skipping"
+#    return 0
+#  fi
+#
+#  cat > "$target" <<'EOF'
+## Geet Global User Preferences
+## This file contains global settings that apply to all geet operations
+## Edit these values to customize your geet experience
+#
+#SHOW_LEVEL=true
+#COLOR_MODE=light
+#COLOR_SCOPE=line
+#EOF
+#  log "created global config at $target"
+#}
+extract_flag --topics TEMPLATE_TOPICS
+extract_flag --homepage TEMPLATE_HOMEPAGE
 write_geet_template_env() {
   local target="$NEW_LAYER_DIR/template-config.env"
   cat > "$target" <<EOF
@@ -291,6 +292,8 @@ write_geet_template_env() {
 # What is your project?
 TEMPLATE_NAME=$LAYER_NAME
 TEMPLATE_DESC="$NEW_TEMPLATE_DESC"
+TEMPLATE_TOPICS="geet,template,$TEMPLATE_TOPICS"
+TEMPLATE_HOMEPAGE="$TEMPLATE_HOMEPAGE"
 
 # ______________________________________________________________________________________________________________________
 # REPO LOCATION
@@ -328,7 +331,7 @@ EOF
 
 
 # Create global config if it doesn't exist
-write_global_config
+#write_global_config
 
 # Create template .env configuration files
 write_geet_template_env
@@ -514,7 +517,7 @@ log "setting up parent.gitignore promotion (see docs/AUTO_PROMOTE.md)"
 pgi_hash=$(git --git-dir="$NEW_DOTGIT" hash-object -w "$NEW_LAYER_DIR/parent.gitignore")
 
 # Stage file at promoted location (root)
-git --git-dir="$NEW_DOTGIT" update-index --add --cacheinfo 100644 "$pgi_hash" "parent.gitignore"
+git --git-dir="$NEW_DOTGIT" update-index --add --cacheinfo 100644 "$pgi_hash" ".gitignore"
 
 # Configure merge strategy for promoted file
 mkdir -p "$NEW_DOTGIT/info"
@@ -550,7 +553,7 @@ debug "committing"
 log "README.md will appear at root on GitHub"
 log "future edits to .$LAYER_NAME/README.md auto-promote to README.md"
 
-r="$(geet_git commit -m "Initial $LAYER_NAME template")"
+geet_git commit -m "Initial $LAYER_NAME template" || true
 log "committed initial files"
 ###############################################################################
 # SETUP CUSTOM ALIAS (package.json if present)
@@ -599,6 +602,6 @@ log "  1) edit: $NEW_LAYER_DIR/.geetinclude"
 log "  2) cd $APP_DIR"
 log "  3) stage files: $GEET_ALIAS add -A"
 log "  4) commit:      $GEET_ALIAS commit -m \"Add the basic template\""
-log "  5) publish:     $GEET_ALIAS publish --public"
+log "  5) publish:     $GEET_ALIAS pub"
 
 }  # end of template()

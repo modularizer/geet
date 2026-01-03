@@ -78,7 +78,7 @@ geet add -A
 geet commit -m "Initial template layer"
 
 # Push to GitHub (optional)
-# geet gh publish --public
+# geet gh pub
 ```
 
 ### Step 2: Use the template in a new app
@@ -396,17 +396,8 @@ git commit -am "Update company template"
 
 ```bash
 cd my-template
-
-# One-time setup (if needed)
-geet gh setup
-
 # Publish repository
-geet gh publish --public --description "My awesome template"
-
-# Or private
-geet gh publish --private
-
-# The repo name defaults to directory name (my-template)
+geet gh pub
 ```
 
 ### Use GitHub CLI features

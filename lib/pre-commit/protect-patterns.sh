@@ -23,7 +23,7 @@ protect_patterns(){
         [[ -z "$pattern" ]] && continue
         while IFS= read -r file; do
           [[ -z "$file" ]] && continue
-          echo "checking $file against pattern $pattern"
+#          echo "checking $file against pattern $pattern"
           if echo "$file" | grep -qE "$pattern"; then
             errors+=("FILE: $file matches pattern: $pattern")
           fi
@@ -42,7 +42,7 @@ protect_patterns(){
           [[ ! -f "$file" ]] && continue
           file -b "$file" 2>/dev/null | grep -q text || continue
 
-          echo "checking content of $file for $pattern"
+#          echo "checking content of $file for $pattern"
 
           [[ "$file" == *template-config.env ]] && continue
 

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 
-echo "HOOK GIT_INDEX_FILE=${GIT_INDEX_FILE-<unset>}" >&2
+#echo "HOOK GIT_INDEX_FILE=${GIT_INDEX_FILE-<unset>}" >&2
 DOTGIT="$(dirname -- $GIT_INDEX_FILE)"
 TEMPLATE_DIR="$(dirname -- "$DOTGIT")"
 GEET_CMD="$(command -v geet)"
@@ -40,12 +40,13 @@ protect_patterns "$@"
 # - Run linters
 # - Generate files
 # - etc.
-echo "checking for more precommit hooks"
+echo "checking for more precommit hooks..."
 shopt -s nullglob
 for f in "$GEET_LIB"/pre-commit/*.sh; do
   [[ "$(basename "$f")" == "hook.sh" ]] && continue
   [[ "$(basename "$f")" == "unstage-soft-detached-files.sh" ]] && continue
   [[ "$(basename "$f")" == "auto-promote-readme.sh" ]] && continue
+  [[ "$(basename "$f")" == "auto-promote-pgi.sh" ]] && continue
   [[ "$(basename "$f")" == "protect-patterns.sh" ]] && continue
   echo "sourcing $f ..."
   source "$f"

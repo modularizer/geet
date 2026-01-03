@@ -384,10 +384,10 @@ geet_git () {
     die "geet_git called but GEET_GIT is not set (no template directory found)"
   fi
   debug "Calling:" "$GEET_GIT" "$@"
-  x="$("$GEET_GIT" "$@")"
+  "$GEET_GIT" "$@"
   local rc=$?
   debug "rc=$rc"
-  return 0
+  return "$rc"
 }
 
 
