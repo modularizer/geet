@@ -14,7 +14,7 @@ protect_patterns(){
     errors=()
 
     # Get list of staged files
-    staged_files=$(geet_git diff --cached --name-only)
+    staged_files=$(git diff --cached --name-only)
 
     # Check file patterns (pipe-delimited)
     if [[ -n "$file_patterns" ]]; then
@@ -23,6 +23,7 @@ protect_patterns(){
         [[ -z "$pattern" ]] && continue
         while IFS= read -r file; do
           [[ -z "$file" ]] && continue
+          echo "checking $file against pattern $pattern"
           if echo "$file" | grep -qE "$pattern"; then
             errors+=("FILE: $file matches pattern: $pattern")
           fi
@@ -40,6 +41,10 @@ protect_patterns(){
           # Skip binary files and directories
           [[ ! -f "$file" ]] && continue
           file -b "$file" 2>/dev/null | grep -q text || continue
+
+          echo "checking content of $file for $pattern"
+
+          [[ "$file" == *template-config.env ]] && continue
 
           # Search for pattern in file
           matches=$(grep -nE "$pattern" "$file" 2>/dev/null || true)
@@ -62,7 +67,7 @@ protect_patterns(){
       echo >&2
       echo "These patterns suggest implementation-specific code that shouldn't be in the template." >&2
       echo >&2
-      echo "To bypass this check: $GEET_ALIAS commit --no-verify" >&2
+      echo "To bypass this check: geet commit --no-verify" >&2
       echo "To fix: Remove the matched patterns or update .geet-template.env" >&2
       exit 1
     fi

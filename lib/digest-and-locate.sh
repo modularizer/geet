@@ -147,7 +147,7 @@ load_env_file() {
 
 # Write local cache file (system-specific paths)
 write_geet_local_env() {
-  local target="${1:-$TEMPLATE_DIR/.geet-local.env}"
+  local target="${1:-$TEMPLATE_DIR/untracked-template-config.env}"
   [[ -f "$target" ]] && return 0  # Don't overwrite existing
 
   cat > "$target" <<EOF
@@ -171,8 +171,9 @@ EOF
 # Lazy GH_USER detection (only call when needed, not in prework)
 get_gh_user() {
   # Return cached if available
-  [[ -n "${GH_USER:-}" ]] && printf '%s' "$GH_USER" && return 0
-  [[ -n "${CACHED_GH_USER:-}" ]] && printf '%s' "$CACHED_GH_USER" && return 0
+  if [[ "$GH_USER" != "$DEFAULT_GH_USER" ]] || [[ -z "$GH_USER" ]]; then
+    return 0
+  fi
 
   # Expensive detection (200-500ms)
   debug "detecting GitHub user (this is slow, caching result)..."
@@ -193,7 +194,6 @@ get_gh_user() {
   fi
 
   GH_USER="$detected"
-  printf '%s' "$GH_USER"
 }
 
 
@@ -300,13 +300,13 @@ fi
 # Extract --geet-dir <value> from args (mutates caller positional params)
 has_flag --geet-dir TEMPLATE_DIR
 
-# FAST PATH: Try to load cached TEMPLATE_DIR from .geet-local.env
+# FAST PATH: Try to load cached TEMPLATE_DIR from untracked-template-config.env
 if [[ -z "$TEMPLATE_DIR" ]]; then
-  debug "no --geet-dir flag, trying fast path (cached .geet-local.env)"
+  debug "no --geet-dir flag, trying fast path (cached untracked-template-config.env)"
   search_dir="$PWD"
   while [[ "$search_dir" != "/" ]]; do
-    if load_env_file "$search_dir/.geet-local.env"; then
-      debug "cache hit: loaded $search_dir/.geet-local.env"
+    if load_env_file "$search_dir/untracked-template-config.env"; then
+      debug "cache hit: loaded $search_dir/untracked-template-config.env"
       break
     fi
     search_dir="$(dirname "$search_dir")"
@@ -344,9 +344,8 @@ find_git_root() {
 # Set template-dependent paths (only if TEMPLATE_DIR exists)
 if [[ -n "$TEMPLATE_DIR" ]]; then
   # Load template .env files in precedence order (lowest to highest)
-  load_env_file "$TEMPLATE_DIR/.geet-template.env"
-  load_env_file "$TEMPLATE_DIR/.geet-metadata.env"
-  load_env_file "$TEMPLATE_DIR/.geet-local.env"  # Highest precedence
+  load_env_file "$TEMPLATE_DIR/template-config.env"
+  load_env_file "$TEMPLATE_DIR/untracked-template-config.env"  # Highest precedence
 
   # Derive paths (fast string operations, no external commands)
   DOTGIT="$TEMPLATE_DIR/dot-git"
@@ -356,7 +355,7 @@ if [[ -n "$TEMPLATE_DIR" ]]; then
   APP_NAME="${APP_NAME:-$(basename -- "$APP_DIR")}"
 
   # Create local cache if missing (one-time cost)
-  if [[ ! -f "$TEMPLATE_DIR/.geet-local.env" ]]; then
+  if [[ ! -f "$TEMPLATE_DIR/untracked-template-config.env" ]]; then
     write_geet_local_env
   fi
 
@@ -385,17 +384,18 @@ geet_git () {
     die "geet_git called but GEET_GIT is not set (no template directory found)"
   fi
   debug "Calling:" "$GEET_GIT" "$@"
-  "$GEET_GIT" "$@"
+  x="$("$GEET_GIT" "$@")"
   local rc=$?
-  return $rc
+  debug "rc=$rc"
+  return 0
 }
 
 
 
 # GH_USER: Use cached value from .geet-metadata.env or leave as placeholder
 # Don't auto-detect here (expensive) - use get_gh_user() function when needed
-GH_USER="${CACHED_GH_USER:-$DEFAULT_GH_USER}"
-debug "GH_USER (from cache or default): $GH_USER"
+GH_USER="$DEFAULT_GH_USER"
+debug "GH_USER (from default): $GH_USER"
 
 # read_config: Get config value by key name
 # Helper function that maps friendly key names to environment variables

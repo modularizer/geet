@@ -18,7 +18,7 @@ geet includes a pre-commit hook that checks for configurable patterns before all
 
 ## Configuration
 
-Patterns are defined in `.mytemplate/.geet-template.env` as pipe-delimited strings:
+Patterns are defined in `.mytemplate/template-config.env` as pipe-delimited strings:
 
 ```bash
 # Prevent committing files matching these patterns (pipe-delimited regex)
