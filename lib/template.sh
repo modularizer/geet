@@ -588,31 +588,6 @@ log "README.md will appear at root on GitHub"
 log "future edits to .$LAYER_NAME/README.md auto-promote to README.md"
 
 geet_git commit -m "Initial commit" || true
-###############################################################################
-# SETUP CUSTOM ALIAS (package.json if present)
-###############################################################################
-
-PACKAGE_JSON="$APP_DIR/package.json"
-if [[ -f "$PACKAGE_JSON" ]]; then
-  # Check if jq is available for safe JSON manipulation
-  if command -v jq >/dev/null 2>&1; then
-    log "adding '$LAYER_NAME' script to package.json"
-
-    # Add script using jq
-    tmp_json=$(mktemp)
-    jq --arg name "$LAYER_NAME" --arg path ".$LAYER_NAME/geet.sh" \
-      '.scripts[$name] = $path' \
-      "$PACKAGE_JSON" > "$tmp_json"
-    mv "$tmp_json" "$PACKAGE_JSON"
-
-    log "you can now run: npm run $LAYER_NAME <command>"
-  else
-    log "tip: install jq to auto-add npm scripts"
-    log "or manually add to package.json:"
-    log "  \"scripts\": { \"$LAYER_NAME\": \".$LAYER_NAME/geet.sh\" }"
-  fi
-fi
-
 
 
 ###############################################################################
