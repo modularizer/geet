@@ -5,7 +5,7 @@ unstage_soft_detached(){
   [[ -f "$SOFT_DETACHED" ]] || return 0
 
   # staged files (NUL-separated)
-  staged="$(geet_git diff --cached --name-only -z || true)"
+  staged="$("$geet_git" diff --cached --name-only -z || true)"
   [[ -n "$staged" ]] || return 0
 
   # Build list of staged files to unstage (NUL-separated)

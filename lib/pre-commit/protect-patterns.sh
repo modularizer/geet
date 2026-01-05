@@ -14,7 +14,7 @@ protect_patterns(){
     errors=()
 
     # Get list of staged files
-    staged_files=$(git diff --cached --name-only)
+    staged_files=$("$geet_git" diff --cached --name-only)
 
     # Check file patterns (pipe-delimited)
     if [[ -n "$file_patterns" ]]; then
