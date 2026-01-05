@@ -159,6 +159,18 @@ geet
 > geet lets you reuse and evolve templates **inside real projects**, using Git itself — without refactoring, copying files, or changing layouts.
 
 
+---
+
+### Technical limitations
+
+##### 1. It is difficult to make the main app ignore files from the template repo. (template repo must be a subset of the app)
+It is difficult to ignore files in your app repo but commit them to the template repo. This is because git ALWAYS looks at .gitignore files and gives them a higher priority than the `core.excludesFile` variable we use (See docs [here](https://git-scm.com/docs/gitignore))
+Solutions:
+ 1. just commit the whole template to your app. this is the simplest solution, and the one we are leaning into for now to reduce complexity.
+ 2. Technically we could modify our `.geet-git.sh` file to move the parent's gitignore out of the way as we do the commit and then back into place after, but we promised you no hacks like that and plan to avoid this unless it becomes necessary.
+ 3. You can add template files using `-f` arg, but that also ignores the `.geetexclude` so could be dangerous. 
+
+---
 
 ### Just two git repos?
 nope ;)

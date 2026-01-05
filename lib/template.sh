@@ -57,9 +57,16 @@ debug "creating new template layer, APP_NAME=$APP_NAME"
 #   $GEET_ALIAS template sk2   -> creates .sk2
 #
 RAW_NAME="${1:-}"
+#
+NEW_TEMPLATE_DESC="${2:-}"
+
+# usage, both raw_name and new_template desc are required to be non-empty, and neither can startwith a dash, and neither can equal "help"
 
 # Show help if requested
-if [[ "$RAW_NAME" == "help" || "$RAW_NAME" == "-h" || "$RAW_NAME" == "--help" ]]; then
+if [[ -z "$RAW_NAME" || -z "$NEW_TEMPLATE_DESC" \
+   || "$RAW_NAME" == -* || "$NEW_TEMPLATE_DESC" == -* \
+   || "$RAW_NAME" == "help" || "$NEW_TEMPLATE_DESC" == "help" \
+   || ! "$RAW_NAME" =~ ^[A-Za-z0-9_-]+$ ]]; then
   cat <<EOF
 $GEET_ALIAS template — promote the CURRENT APP into a NEW TEMPLATE REPO
 
@@ -75,10 +82,9 @@ Think of this as:
    the implementation specific code. In fact, it may not even be possible"
 
 Usage:
-  $GEET_ALIAS template <name> [description]
+  $GEET_ALIAS template <name> <description> [--public|--private|--internal]
 
 Examples:
-  $GEET_ALIAS template mytemplate
   $GEET_ALIAS template mytemplate "A React Native base project"
   $GEET_ALIAS template sk2 "Starter kit v2 with TypeScript"
 
@@ -112,26 +118,25 @@ fi
 # Normalize: remove leading dot if present
 LAYER_NAME="${RAW_NAME#.}"
 
-# Validation: cannot be empty after normalization
-if [[ -z "$LAYER_NAME" ]]; then
-  die "template name cannot be empty or just a dot"
-fi
-
-# Validation: cannot contain spaces
-if [[ "$LAYER_NAME" =~ [[:space:]] ]]; then
-  die "template name cannot contain spaces: '$LAYER_NAME'"
-fi
 
 # Validation: must be different from app name
 if [[ "$LAYER_NAME" == "$APP_NAME" ]]; then
   die "template name must be different from app name: '$APP_NAME'"
 fi
 
+has_flag "--allow-exists" ALLOW_EXISTS;
+if [[ -e "$LAYER_NAME" ]] && ! [[ -n "${ALLOW_EXISTS:-}" ]]; then
+  warn "Hmm... it looks like .$LAYER_NAME exists, which is odd..."
+  warn "Please review our docs to make sure you understand what we are doing here. "
+  warn "If you are able to put all of your template code into one folder like $LAYER_NAME, geet may not be the right tool to be using"
+  warn "It seems likely that git submodules may work better for your use case"
+  die "If you wish to proceed, try again with --allow-exists"
+fi
+
+
 NEW_LAYER_DIR="$APP_DIR/.${LAYER_NAME}"
 TEMPLATE_DIR="$NEW_LAYER_DIR"
 
-# Optional description argument
-NEW_TEMPLATE_DESC="${2:-}"
 
 
 
@@ -251,12 +256,15 @@ If you're the owner of this template, feel free to overwrite or add to this READ
 
 
 EOFREADME
-debug "wrote" "$NEW_LAYER_DIR/README.md"
+debug "wrote" "$NEW_LAYER_DIR/README.md" .g
 
 
 cat > "$NEW_LAYER_DIR/parent.gitignore" <<EOFPGI
 # This is a sample of your APP's gitignore, (NOT the template repo's gitignore)
-# You can extend or overwrite it, but it NEEDS to ignore the following two things
+# You can extend or overwrite it, but it NEEDS to ignore the following
+!.$LAYER_NAME/
+!.$LAYER_NAME/*
+.$LAYER_NAME/dot-git/
 **/dot-git/
 **/untracked-template-config.env
 EOFPGI
@@ -362,8 +370,18 @@ cat > "$NEW_LAYER_DIR/.geetexclude" <<EOFGEETEXCLUDE
 # DEFAULT INCLUDE SECTION (optional)
 #    this section excludes everything, then adds back in some tools
 #-----------------------------------------------------------------------------------------------------------------------
+# ignore everything
 *
+# allow root folder
 !*/
+
+# allow the template repo folder
+!.$LAYER_NAME/
+
+# but ignore everything in it
+.$LAYER_NAME/*
+
+# except allow what we whitelist
 !.$LAYER_NAME/geet.sh
 !.$LAYER_NAME/.geethier
 !.$LAYER_NAME/.geetinclude
@@ -482,8 +500,21 @@ fi
 # - commands are scoped correctly to the new layer
 #
 # First, compile excludes by calling status (idempotent).
+debug "sourcing sync"
 source "$GEET_LIB/sync.sh"
+debug "syncing"
 sync
+debug "synced"
+
+# update the parents gitignore
+debug "checking " "$APP_DIR/.gitignore"
+touch "$APP_DIR/.gitignore"
+grep -qxF "!.$LAYER_NAME/" "$APP_DIR/.gitignore" || echo "!.$LAYER_NAME/" >> "$APP_DIR/.gitignore"
+grep -qxF "!.$LAYER_NAME/*" "$APP_DIR/.gitignore" || echo "!.$LAYER_NAME/*" >> "$APP_DIR/.gitignore"
+grep -qxF ".$LAYER_NAME/dot-git" "$APP_DIR/.gitignore" || echo ".$LAYER_NAME/dot-git" >> "$APP_DIR/.gitignore"
+grep -qxF "**/dot-git/" "$APP_DIR/.gitignore" || echo "**/dot-git/" >> "$APP_DIR/.gitignore"
+grep -qxF "**/untracked-template-config.env" "$APP_DIR/.gitignore" || echo "**/untracked-template-config.env" >> "$APP_DIR/.gitignore"
+
 geet_git add ".$LAYER_NAME/geet.sh"
 geet_git add ".$LAYER_NAME/.geethier"
 geet_git add ".$LAYER_NAME/.geetinclude"
@@ -582,12 +613,6 @@ if [[ -f "$PACKAGE_JSON" ]]; then
   fi
 fi
 
-
-# update the parents gitignore
-debug "checking " "$APP_DIR/.gitignore"
-touch "$APP_DIR/.gitignore"
-grep -qxF "**/dot-git/" "$APP_DIR/.gitignore" || echo "**/dot-git/" >> "$APP_DIR/.gitignore"
-grep -qxF "**/untracked-template-config.env" "$APP_DIR/.gitignore" || echo "**/untracked-template-config.env" >> "$APP_DIR/.gitignore"
 
 
 ###############################################################################
