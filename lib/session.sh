@@ -81,7 +81,7 @@ trap cleanup EXIT
 log "splitting ($mode) to: $tmp"
 # Call split function from split.sh
 source "$GEET_LIB/split.sh"
-split "$tmp" "$mode"
+split "$tmp" "$mode" "--splitdst-exists-ok"
 
 log "running in temp dir: $*"
 (

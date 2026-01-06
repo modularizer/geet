@@ -54,7 +54,8 @@ mode="${2:-tracked}"
 [[ -f "$TEMPLATE_DIR/.geetexclude" ]] || die "missing compiled exclude. Run: $GEET_ALIAS sync"
 
 # Safety: refuse to export into an existing directory to avoid accidental overwrites.
-if [[ -e "$dest" ]]; then
+has_flag "--splitdst-exists-ok" SPDE
+if [[ -e "$dest"  && -n "$SPDE" ]]; then
   die "destination already exists: $dest"
 fi
 
