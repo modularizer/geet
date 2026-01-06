@@ -456,8 +456,8 @@ log "created geet.sh wrapper (ensures geet sees the correct template dir)"
 mkdir -p "$NEW_LAYER_DIR/pre-commit"
 cat > "$NEW_LAYER_DIR/pre-commit/README.md" <<EOFGEET
 # We support pre-commit hooks!
- * Simply add .sh files to ${NEW_LAYER_DIR}/pre-commit/
- * make certain they are executable (\`chmod +x $NEW_LAYER_DIR/pre-commit/*.sh\`)
+ * Simply add .sh files to .${LAYER_NAME}/pre-commit/
+ * make certain they are executable (\`chmod +x .${LAYER_NAME}/pre-commit/*.sh\`)
  * During pre-commit we will iterate through each and \`source\` each one.
  * It's up to you which hooks you track with git or ignore, in general probably best to commit them
 EOFGEET
