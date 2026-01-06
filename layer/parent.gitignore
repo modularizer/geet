@@ -1,0 +1,6 @@
+!.$LAYER_NAME/
+!.$LAYER_NAME/*
+.$LAYER_NAME/dot-git/
+**/dot-git/
+**/untracked-template-config.env
+*$TEMPLATE_FILE_SUFFIX.*

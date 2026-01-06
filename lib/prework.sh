@@ -100,7 +100,6 @@ prework() {
     print_var TEMPLATE_DIR "Template directory (e.g., .mytemplate)"
     print_var DOTGIT "Template's git directory (dot-git)"
     print_var GEET_GIT "Path to geet-git.sh wrapper"
-    print_var SOFT_DETACHED "Soft-detached files list"
     print_var TEMPLATE_NAME "Template name"
     print_var TEMPLATE_DESC "Template description"
     print_var TEMPLATE_GH_USER "Template owner's GitHub username"

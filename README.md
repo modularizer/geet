@@ -85,9 +85,8 @@ geet just provides wrappers, helpers, and safety rails around it.
 
 ## How geet helps you stay in control
 
-### Slide and detach (reduce conflicts)
+### Detach (reduce conflicts)
 
-* **Slide** a file or folders to start making app-specific changes to a file, but still pull non-conflicting changes from the template and never commit your app-specific code back up
 * **Detach** files or folders to entirely detach those from the template, so you don't pull or push to/from the template for those files
 * You can diverge gradually, file by file
 * If you need a full, hard, 100% detachment of the template, you can just delete the `.mytemplate` folder
@@ -136,6 +135,22 @@ You’ll “get it” in 5 minutes (hopefully).
 npm install -g geet-geet
 geet
 ```
+
+
+| cmd             | description                                                                         | example                                                     |
+|-----------------|-------------------------------------------------------------------------------------|-------------------------------------------------------------|
+| `geet`          | Show help                                                                           | `geet`                                                      |
+| `geet template` | Promote the current project into a new template and share the template repo         | `geet template mytemplate "a cool reusable tool" --private` |
+| `geet install`  | Install a template and create a fresh new repo using it                             | `geet install modularizer/rnb --private`                    |
+| `geet pull`     | Pull updates from the template repo                                                 | `geet pull`                                                 |
+| `geet include`  | Wrapper around `git add` for adding files to template                               | `geet include src/`                                         |
+| `geet inspect`  | Shows the status of the file or folder in working tree, app repo, and template repo | `geet inspect src/components/Button.tsx`                    |
+| `geet tree`     | Shows `git ls-files` of the template repo in a tree structure                       | `geet tree`                                                 |
+| `geet prework`  | Mainly for developers of `geet`, shows variables                                    | `geet prework`                                              |
+| `geet doctor`   | Run some checks on the setup                                                        | `geet doctor`                                               |
+| `geet <cmd>`    | Calls any git command in the template repo                                          | `geet status`, `geet push`, `geet fetch`, etc.              |
+
+
 
 ---
 

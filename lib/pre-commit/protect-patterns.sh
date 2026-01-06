@@ -38,16 +38,21 @@ protect_patterns(){
         [[ -z "$pattern" ]] && continue
         while IFS= read -r file; do
           [[ -z "$file" ]] && continue
-          # Skip binary files and directories
-          [[ ! -f "$file" ]] && continue
-          file -b "$file" 2>/dev/null | grep -q text || continue
+
+          # Skip if file doesn't exist in the index (deleted files)
+          "$geet_git" ls-files --error-unmatch "$file" &>/dev/null || continue
+
+          # Skip binary files by checking the staged content
+          if "$geet_git" diff --cached --numstat "$file" | grep -q '^-[[:space:]]*-'; then
+            continue
+          fi
 
 #          echo "checking content of $file for $pattern"
 
           [[ "$file" == *template-config.env ]] && continue
 
-          # Search for pattern in file
-          matches=$(grep -nE "$pattern" "$file" 2>/dev/null || true)
+          # Search for pattern in staged content
+          matches=$("$geet_git" show ":$file" 2>/dev/null | grep -nE "$pattern" || true)
           if [[ -n "$matches" ]]; then
             while IFS= read -r match; do
               errors+=("CONTENT: $file matches pattern: $pattern"$'\n'"  → $match")

@@ -104,16 +104,15 @@ EOF
   return 0
 fi
 
+
+GEET_ALIAS='geet'
 # Detect GH_USER lazily (only when needed for template creation)
 if [[ "$GH_USER" == "$DEFAULT_GH_USER" ]] || [[ -z "$GH_USER" ]]; then
   get_gh_user
 fi
 TEMPLATE_GH_USER=GH_USER
 debug "GH_USER=$GH_USER"
-# Validation: must be non-empty
-if [[ -z "$RAW_NAME" ]]; then
-  die "template requires a name argument (e.g., '$GEET_ALIAS template mytemplate')"
-fi
+TEMPLATE_FILE_SUFFIX=".template"
 
 # Normalize: remove leading dot if present
 LAYER_NAME="${RAW_NAME#.}"
@@ -137,13 +136,7 @@ fi
 NEW_LAYER_DIR="$APP_DIR/.${LAYER_NAME}"
 TEMPLATE_DIR="$NEW_LAYER_DIR"
 
-
-
-
-
 debug "new template layer will be created at: $NEW_LAYER_DIR"
-
-
 
 ###############################################################################
 # SAFETY CHECKS
@@ -188,158 +181,35 @@ echo "$LAYER_NAME" >> "$NEW_LAYER_DIR/.geethier"
 debug "made" "$NEW_LAYER_DIR/.geethier"
 
 
-cat > "$NEW_LAYER_DIR/README.md" <<EOFREADME
-# Welcome to the "$LAYER_NAME" template!
-
-> ${NEW_TEMPLATE_DESC:-a template to build from}
-
-This template was created with [geet](https://github.com/modularizer/geet),
-a CLI git wrapper which acts as an alternative to git submodules,
-allowing publishing a template which controls files which are interspersed in the same working directory as your project.
-
-## QUICKSTART
-\`\`\`bash
-npm install -g geet-geet
-geet install $GH_USER/$LAYER_NAME.git $DD_APP_NAME
-\`\`\`
-
-### Operations
-### 1. Pull template updates
-\`\`\`bash
-geet pull
-\`\`\`
-
-### 2. Soft-detach a file or many files
-> "If I diverge from the template, let me"
-
-This applies keep-ours merges to only accept ff-only updates to specific files, and configures a precommit hook to unstage these files if you accidentally stage your updates.
-\`\`\`bash
-geet slide app/index.tsx
-\`\`\`
-
-### 3. Hard-detach
-> "I am absolutely changing this file and diverging from the template"
-
-Done via --skip-worktree
-
-\`\`\`bash
-geet detach app/index.tsx
-\`\`\`
-
-### 4. Check what is tracked by the template
-\`\`\`bash
-geet tree
-\`\`\`
-
-### Everything else
-Just use \`git\` for commands related to your app and \`geet\` for any git commands related to the template repo
-
----
-
-## Things to know:
-1. Typically, template files get double-tracked
-   - They get pulled into your working directory and tracked by YOU
-   - They ALSO are tracked by the remote template repo
-   - If and when you wish, you can pull updates from the template repo into your project and add and commit the files into your repo
-   - If you are a developer/contributor of the template repo, you can optionally push code back to the template repo using a different git command
-2. \`$GEET_ALIAS\` is the suggested entrypoint for all your pull/push git-like commands. It protects you and adds some features. More on that later.
-3. You can either operate your template on an **include basis (recommended)** or and exclude basis.
-   - You probably know about standard \`.gitignore\` files,  but in this case since we have all the app code stuff can be a bit different.
-   - [.$LAYER_NAME/.geetinclude](.$LAYER_NAME/.geetinclude) is a whitelist that gets parsed into [.$LAYER_NAME/.geetexclude](.$LAYER_NAME/.geetexclude) which is acting as the template's \`.gitignore\`
-   - Let's say your actual full app is 80% of the code and the generic stuff you are turning into a template is only 20% of the code, it might be best to exclude everything to avoid committing implementation-specific code to the template repo, then add some generic files and folders back in, to allow commiting them to the template. This is when you would use .geetinclude for the convenience
-   - Alternatively, if your primary goal is to develop a template, and 80% of your code is reusable, but then you just have 20% of "sample" code that you don't want included, maybe just overwrite .geetexclude file entierly, **but leave \*\*/dot-git/ excluded**
-   - read the comments in .geetexclude for more info
-   - use `$GEET_ALIAS tree` to see what is currently included in the template repo
-4. geet supports many layered templating, so if you want to extend a template and publish as a new template it is definitly possible! See .geehier to see how many levels this one has
-
-If you're the owner of this template, feel free to overwrite or add to this README to tell users about what your project does. It's all your's from here.
-
-
-EOFREADME
+cp "$GEET_LIB/../layer/README.md" "$NEW_LAYER_DIR/README.md"
+sed -i "s|\\\$LAYER_NAME|$LAYER_NAME|g" "$NEW_LAYER_DIR/README.md"
+sed -i "s|\\\$GH_USER|$GH_USER|g" "$NEW_LAYER_DIR/README.md"
+sed -i "s|\\\$NEW_TEMPLATE_DESC|$NEW_TEMPLATE_DESC|g" "$NEW_LAYER_DIR/README.md"
+sed -i "s|\\\$DD_APP_NAME|$DD_APP_NAME|g" "$NEW_LAYER_DIR/README.md"
+sed -i "s|\\\$TEMPLATE_FILE_SUFFIX|$TEMPLATE_FILE_SUFFIX|g" "$NEW_LAYER_DIR/README.md"
 debug "wrote" "$NEW_LAYER_DIR/README.md" .g
 
 
-cat > "$NEW_LAYER_DIR/parent.gitignore" <<EOFPGI
-# This is a sample of your APP's gitignore, (NOT the template repo's gitignore)
-# You can extend or overwrite it, but it NEEDS to ignore the following
-!.$LAYER_NAME/
-!.$LAYER_NAME/*
-.$LAYER_NAME/dot-git/
-**/dot-git/
-**/untracked-template-config.env
-EOFPGI
+cp "$GEET_LIB/../layer/parent.gitignore" "$NEW_LAYER_DIR/parent.gitignore"
+sed -i "s|\\\$LAYER_NAME|$LAYER_NAME|g" "$NEW_LAYER_DIR/parent.gitignore"
+sed -i "s|\\\$TEMPLATE_FILE_SUFFIX|$TEMPLATE_FILE_SUFFIX|g" "$NEW_LAYER_DIR/parent.gitignore"
 debug "wrote" "$NEW_LAYER_DIR/parent.gitignore"
-# Helper functions to create .env files
-#write_global_config() {
-#  local target="$GEET_LIB/../config.env"
-#  # Only create if it doesn't exist (don't overwrite user preferences)
-#  if [[ -f "$target" ]]; then
-#    debug "global config already exists at $target, skipping"
-#    return 0
-#  fi
-#
-#  cat > "$target" <<'EOF'
-## Geet Global User Preferences
-## This file contains global settings that apply to all geet operations
-## Edit these values to customize your geet experience
-#
-#SHOW_LEVEL=true
-#COLOR_MODE=light
-#COLOR_SCOPE=line
-#EOF
-#  log "created global config at $target"
-#}
+
+
 extract_flag --topics TEMPLATE_TOPICS
 extract_flag --homepage TEMPLATE_HOMEPAGE
 write_geet_template_env() {
   local target="$NEW_LAYER_DIR/template-config.env"
-  cat > "$target" <<EOF
-# ______________________________________________________________________________________________________________________
-# Basics
-# ______________________________________________________________________________________________________________________
-# What is your project?
-TEMPLATE_NAME=$LAYER_NAME
-TEMPLATE_DESC="$NEW_TEMPLATE_DESC"
-TEMPLATE_TOPICS="geet,template,$TEMPLATE_TOPICS"
-TEMPLATE_HOMEPAGE="$TEMPLATE_HOMEPAGE"
-
-# ______________________________________________________________________________________________________________________
-# REPO LOCATION
-# ______________________________________________________________________________________________________________________
-# Where is the repo? (this should get autopopulated when you run '$GEET_ALIAS template', but you can fix it here)
-TEMPLATE_GH_USER=$GH_USER
-TEMPLATE_GH_NAME=$LAYER_NAME
-TEMPLATE_GH_URL=https://github.com/$GH_USER/$LAYER_NAME
-TEMPLATE_GH_SSH=git@github.com:$GH_USER/$LAYER_NAME.git
-TEMPLATE_GH_HTTPS=https://github.com/$GH_USER/$LAYER_NAME.git
-
-# ______________________________________________________________________________________________________________________
-# Configuring Help Text
-# ______________________________________________________________________________________________________________________
-# Is there an alias to your /path/to/.$TEMPLATE_NAME/geet.sh?
-# maybe you added to package.json or something like that
-# update it here to update the CLI docs and help text
-GEET_ALIAS="${GEET_ALIAS}"
-
-# also use in help text thorughout the CLI
-DD_APP_NAME=MyApp
-DD_TEMPLATE_NAME=$LAYER_NAME
-
-
-# ______________________________________________________________________________________________________________________
-# Configuring Precommit
-# ______________________________________________________________________________________________________________________
-PREVENT_COMMIT_FILE_PATTERNS=".*secret.*"
-
-# Prevent committing content matching these patterns (pipe-delimited regex)
-PREVENT_COMMIT_CONTENT_PATTERNS="API_KEY=|SECRET_KEY=|password:\\s*[\"'].*[\"']|TODO.*remove.*template|CUSTOMER_ID=|stripe_live_key"
-EOF
+  cp "$GEET_LIB/../layer/template-config.env" "$NEW_LAYER_DIR/template-config.env"
+  sed -i "s|\\\$LAYER_NAME|$LAYER_NAME|g" "$NEW_LAYER_DIR/template-config.env"
+  sed -i "s|\\\$NEW_TEMPLATE_DESC|$NEW_TEMPLATE_DESC|g" "$NEW_LAYER_DIR/template-config.env"
+  sed -i "s|\\\$TEMPLATE_TOPICS|$TEMPLATE_TOPICS|g" "$NEW_LAYER_DIR/template-config.env"
+  sed -i "s|\\\$TEMPLATE_HOMEPAGE|$TEMPLATE_HOMEPAGE|g" "$NEW_LAYER_DIR/template-config.env"
+  sed -i "s|\\\$GH_USER|$GH_USER|g" "$NEW_LAYER_DIR/template-config.env"
+  sed -i "s|\\\$GEET_ALIAS|$GEET_ALIAS|g" "$NEW_LAYER_DIR/template-config.env"
+  sed -i "s|\\\$TEMPLATE_FILE_SUFFIX|$TEMPLATE_FILE_SUFFIX|g" "$NEW_LAYER_DIR/template-config.env"
   debug "wrote $target"
 }
-
-
-# Create global config if it doesn't exist
-#write_global_config
 
 # Create template .env configuration files
 write_geet_template_env
@@ -350,89 +220,22 @@ if [[ -f "$TEMPLATE_DIR/.geetinclude" ]]; then
   log "copying .geetinclude template from $TEMPLATE_DIR/.geetinclude"
   cp "$TEMPLATE_DIR/.geetinclude" "$NEW_LAYER_DIR/.geetinclude"
 else
-  cat > "$NEW_LAYER_DIR/.geetinclude" <<'EOFGEETINCLUDE'
-# Add your include stuff here, you can call '$GEET_ALIAS sync' to sync it to the .geetexclude if you wish, but it will also auto-sync on every geet command
-EOFGEETINCLUDE
+  cp "$GEET_LIB/../layer/.geetinclude" "$NEW_LAYER_DIR/.geetinclude"
+  sed -i "s|\\\$GEET_ALIAS|$GEET_ALIAS|g" "$NEW_LAYER_DIR/.geetinclude"
 fi
 
 # Create initial .geetexclude with base rules and markers for compiled includes
-cat > "$NEW_LAYER_DIR/.geetexclude" <<EOFGEETEXCLUDE
-#-----------------------------------------------------------------------------------------------------------------------
-# FAQ SECTION (docs)
-#-----------------------------------------------------------------------------------------------------------------------
-# Q: Can I fully overwrite this file?
-# A: YES BUT: you MUST ensure **/dot-git/ gets ignored/excluded
-
-# Q: How to sync from my .$LAYER_NAME/.geetinclude?
-# A: run \`$GEET_ALIAS sync\` or \`.$LAYER_NAME/bin/git-sync.sh\`
-
-#-----------------------------------------------------------------------------------------------------------------------
-# DEFAULT INCLUDE SECTION (optional)
-#    this section excludes everything, then adds back in some tools
-#-----------------------------------------------------------------------------------------------------------------------
-# ignore everything
-*
-# allow root folder
-!*/
-
-# allow the template repo folder
-!.$LAYER_NAME/
-
-# but ignore everything in it
-.$LAYER_NAME/*
-
-# except allow what we whitelist
-!.$LAYER_NAME/geet.sh
-!.$LAYER_NAME/.geethier
-!.$LAYER_NAME/.geetinclude
-!.$LAYER_NAME/.geetexclude
-!.$LAYER_NAME/template-config.env
-!.$LAYER_NAME/parent.gitignore
-!.$LAYER_NAME/geet-git.sh
-!.$LAYER_NAME/README.md
-!.$LAYER_NAME/pre-commit/*
-
-#-----------------------------------------------------------------------------------------------------------------------
-# AUTOGENERATED INCLUDE SECTION (optional)
-#    now add back in contents from .geetinclude, just flipped
-#-----------------------------------------------------------------------------------------------------------------------
-# GEETINCLUDESTART
-
-# Whoops! either .$LAYER_NAME/.geetinclude is empty or .$LAYER_NAME/.geetinclude hasn't been synced
-
-# GEETINCLUDEEND
-
-#-----------------------------------------------------------------------------------------------------------------------
-# MANUAL EXCLUDE SECTION
-#    treat this part as your standard .gitignore, if you want to operate on an exclude basis vs an include basis
-#    typically either add to this section OR use .geetinclude, not both
-#    technically you could use both this section and your .geetinclude, but why?
-#-----------------------------------------------------------------------------------------------------------------------
-
-
-#-----------------------------------------------------------------------------------------------------------------------
-# MANDATORY EXCLUDE SECTION (required)
-#    we must never ever commit these files/folders
-#-----------------------------------------------------------------------------------------------------------------------
-**/dot-git/
-**/untracked-template-config.env
-EOFGEETEXCLUDE
+cp "$GEET_LIB/../layer/.geetexclude" "$NEW_LAYER_DIR/.geetexclude"
+sed -i "s|\\\$LAYER_NAME|$LAYER_NAME|g" "$NEW_LAYER_DIR/.geetexclude"
 
 
 ###############################################################################
 # MAKE A GIT WRAPPER
 ###############################################################################
-cat > "$NEW_LAYER_DIR/geet-git.sh" <<EOFGIT
-#!/usr/bin/env bash
-
-THIS_FILE="\${BASH_SOURCE[0]}" # e.g. .$LAYER_NAME/geet-git.sh
-THIS_DIR="\$(cd -- "\$(dirname -- "\$THIS_FILE")" && pwd)" # e.g. .$LAYER_NAME
-PARENT_DIR="\$(dirname "\$THIS_DIR")" # e.g. # e.g. $PATH_TO/$APP_NAME
-
-# this file behaves like git, but always specifies our correct git directory, working tree, and gitignore
-# e.g. exec git --git-dir=".$LAYER_NAME/dot-git" --work-tree="." -c "core.excludesFile=.$LAYER_NAME/.geetexclude" "\$@"
-exec git --git-dir="\$THIS_DIR/dot-git" --work-tree="\$PARENT_DIR" -c "core.excludesFile=\$THIS_DIR/.geetexclude" "\$@"
-EOFGIT
+cp "$GEET_LIB/../layer/geet-git.sh" "$NEW_LAYER_DIR/geet-git.sh"
+sed -i "s|\\\$LAYER_NAME|$LAYER_NAME|g" "$NEW_LAYER_DIR/geet-git.sh"
+sed -i "s|\\\$APP_NAME|$APP_NAME|g" "$NEW_LAYER_DIR/geet-git.sh"
+sed -i "s|\\\$PATH_TO|$PATH_TO|g" "$NEW_LAYER_DIR/geet-git.sh"
 chmod +x "$NEW_LAYER_DIR/geet-git.sh"
 GEET_GIT="$NEW_LAYER_DIR/geet-git.sh"
 log "created geet.sh wrapper (ensures excludesFile is always applied)"
@@ -440,27 +243,14 @@ log "created geet.sh wrapper (ensures excludesFile is always applied)"
 ###############################################################################
 # MAKE A GEET WRAPPER
 ###############################################################################
-cat > "$NEW_LAYER_DIR/geet.sh" <<EOFGEET
-#!/usr/bin/env bash
-# this file behaves like geet, but always specifies our correct template directory, so it can be called from anywhere
-THIS_FILE="\${BASH_SOURCE[0]}" # e.g. .$LAYER_NAME/geet.sh
-THIS_DIR="\$(cd -- "\$(dirname -- "\$THIS_FILE")" && pwd)"  # e.g. .$LAYER_NAME
-
-# now call geet, but tell it the absolute path of the template folder
-# e.g. exec geet --geet-dir ".$LAYER_NAME" "\$@"
-exec geet --geet-dir "\$THIS_DIR" "\$@"
-EOFGEET
+cp "$GEET_LIB/../layer/geet.sh" "$NEW_LAYER_DIR/geet.sh"
+sed -i "s|\\\$LAYER_NAME|$LAYER_NAME|g" "$NEW_LAYER_DIR/geet.sh"
 chmod +x "$NEW_LAYER_DIR/geet.sh"
 log "created geet.sh wrapper (ensures geet sees the correct template dir)"
 
 mkdir -p "$NEW_LAYER_DIR/pre-commit"
-cat > "$NEW_LAYER_DIR/pre-commit/README.md" <<EOFGEET
-# We support pre-commit hooks!
- * Simply add .sh files to .${LAYER_NAME}/pre-commit/
- * make certain they are executable (\`chmod +x .${LAYER_NAME}/pre-commit/*.sh\`)
- * During pre-commit we will iterate through each and \`source\` each one.
- * It's up to you which hooks you track with git or ignore, in general probably best to commit them
-EOFGEET
+cp "$GEET_LIB/../layer/pre-commit/README.md" "$NEW_LAYER_DIR/pre-commit/README.md"
+sed -i "s|\\\$LAYER_NAME|$LAYER_NAME|g" "$NEW_LAYER_DIR/pre-commit/README.md"
 chmod +x "$NEW_LAYER_DIR/pre-commit/README.md"
 
 debug "added files"
@@ -486,10 +276,6 @@ if [ -d "$APP_DIR/not-git" ]; then
   mv "$APP_DIR/not-git" "$APP_DIR/.git"
 fi
 
-# log "don't worry, that file-shuffle was kinda ugly but it was a one-time thing, we don't need to do on every command"
-# log "instead, in the future we will use something like 'git --git-dir=<somefolder> --work-tree=<somefolder> -c core.exludesFile=<somefile>'"
-
-
 ###############################################################################
 # COMPILE WHITELIST AND CREATE INITIAL COMMIT
 ###############################################################################
@@ -514,6 +300,7 @@ grep -qxF "!.$LAYER_NAME/*" "$APP_DIR/.gitignore" || echo "!.$LAYER_NAME/*" >> "
 grep -qxF ".$LAYER_NAME/dot-git" "$APP_DIR/.gitignore" || echo ".$LAYER_NAME/dot-git" >> "$APP_DIR/.gitignore"
 grep -qxF "**/dot-git/" "$APP_DIR/.gitignore" || echo "**/dot-git/" >> "$APP_DIR/.gitignore"
 grep -qxF "**/untracked-template-config.env" "$APP_DIR/.gitignore" || echo "**/untracked-template-config.env" >> "$APP_DIR/.gitignore"
+grep -qxF "*$TEMPLATE_FILE_SUFFIX.*" "$APP_DIR/.gitignore" || echo "*$TEMPLATE_FILE_SUFFIX.*" >> "$APP_DIR/.gitignore"
 
 geet_git add ".$LAYER_NAME/geet.sh"
 geet_git add ".$LAYER_NAME/.geethier"
@@ -525,48 +312,35 @@ geet_git add ".$LAYER_NAME/pre-commit/README.md"
 
 
 ###############################################################################
-# SETUP README PROMOTION
+# MANUALLY PERFORM INITIAL AUTO-PROMOTION
 ###############################################################################
-# Promote .mytemplate/README.md to README.md so it shows on GitHub
-# Uses merge=keep-ours to prevent conflicts after README files diverge
 geet_git add ".$LAYER_NAME/README.md"
-
 log "setting up README.md promotion (see docs/AUTO_PROMOTE.md)"
-
-# Set up keep-ours merge driver (prevents conflicts)
-git --git-dir="$NEW_DOTGIT" config merge.keep-ours.name "Always keep working tree version"
-git --git-dir="$NEW_DOTGIT" config merge.keep-ours.driver "true"
-
-# Get hash of README.md content
 readme_hash=$(git --git-dir="$NEW_DOTGIT" hash-object -w "$NEW_LAYER_DIR/README.md")
-
-# Stage README at promoted location (root)
 git --git-dir="$NEW_DOTGIT" update-index --add --cacheinfo 100644 "$readme_hash" "README.md"
 
-# Configure merge strategy for promoted README
-mkdir -p "$NEW_DOTGIT/info"
-echo "README.md merge=keep-ours" >> "$NEW_DOTGIT/info/attributes"
-
-###############################################################################
-# SETUP PARENT GITIGNORE PROMOTION
-###############################################################################
-# Promote .mytemplate/README.md to README.md so it shows on GitHub
-# Uses merge=keep-ours to prevent conflicts after README files diverge
 geet_git add ".$LAYER_NAME/parent.gitignore"
-
 log "setting up parent.gitignore promotion (see docs/AUTO_PROMOTE.md)"
-# Get hash of README.md content
 pgi_hash=$(git --git-dir="$NEW_DOTGIT" hash-object -w "$NEW_LAYER_DIR/parent.gitignore")
-
-# Stage file at promoted location (root)
 git --git-dir="$NEW_DOTGIT" update-index --add --cacheinfo 100644 "$pgi_hash" ".gitignore"
 
-# Configure merge strategy for promoted file
+
+###############################################################################
+# SETUP MERGE DRIVERS
+###############################################################################
+git config merge.geetSuffixDriver.name "geet suffix merge driver"
+git config merge.geetSuffixDriver.driver "$GEET_LIB/merge-drivers/suffix-merge.sh %O %A %B %P $TEMPLATE_FILE_SUFFIX"
+git --git-dir="$NEW_DOTGIT" config merge.keep-ours.name "Always keep working tree version"
+git --git-dir="$NEW_DOTGIT" config merge.keep-ours.driver "true"
 mkdir -p "$NEW_DOTGIT/info"
-echo ".gitignore merge=keep-ours" >> "$NEW_DOTGIT/info/attributes"
+cat >> "$NEW_DOTGIT/info/attributes" <<'EOF'
+* merge=geetSuffixDriver
+README.md merge=keep-ours
+.gitignore merge=keep-ours
+EOF
 
 
-debug "added files"
+debug "added files and merge drivers"
 ###############################################################################
 # SETUP PRE-COMMIT HOOKS
 ###############################################################################
@@ -578,14 +352,8 @@ mkdir -p "$NEW_DOTGIT/hooks"
 cp "$GEET_LIB/pre-commit/hook.sh" "$NEW_DOTGIT/hooks/pre-commit"
 chmod +x "$NEW_DOTGIT/hooks/pre-commit"
 log "pre-commit hook created:"
-log "  • Auto-promotes README.md to root"
+log "  • Auto-promotes README.md and parent.gitignore to root"
 log "  • Checks for app-specific patterns (configure in template-config.env)"
-
-# Commit the initial promotion
-
-
-log "README.md will appear at root on GitHub"
-log "future edits to .$LAYER_NAME/README.md auto-promote to README.md"
 
 geet_git commit -m "Initial commit" || true
 

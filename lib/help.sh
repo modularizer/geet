@@ -22,13 +22,10 @@ FILE MANAGEMENT:
   inspect <path>                                         Show which layer tracks a file and its git status
   sync                                                   Compile .geetinclude whitelist into .geetexclude
   include <path>                                         Manage included files
-  ignored|included|excluded <path>                       Check if a path is ignored/included/excluded
 
 DETACHMENT (CONFLICT RESOLUTION):
-  detach|hard-detach <path>                              Detach a file to always use "keep-ours" on merge conflicts
-  soft-detach|soft_detach|slide <path>                   Soft detach (lighter alternative)
+  detach <path>                              Detach a file to always use "keep-ours" on merge conflicts
   detached                                               List hard-detached files
-  soft-detached|soft_detached|slid                       List soft-detached files
   retach <path>                                          Undo a detach command
 
 OPERATIONS:

@@ -12,14 +12,9 @@ geet_git="$TEMPLATE_DIR/geet-git.sh"
 _GEET_CMD="$(command -v geet)"
 NODE_BIN="$(cd -- "$(dirname -- "${_GEET_CMD}")" && pwd)"
 GEET_LIB="$(cd -- "$NODE_BIN/../lib/node_modules/geet-geet/lib" && pwd)"
-SOFT_DETACHED="$DOTGIT/info/geet-protected"
 source "$TEMPLATE_DIR/template-config.env"
 
 
-# next, source a few preset commands which we are able to locate using GEET_LIB var which was set when we sourced geet above
-echo "checking if we need to unstage soft detached files..."
-source "$GEET_LIB/pre-commit/unstage-soft-detached-files.sh"
-unstage_soft_detached "$@"
 
 echo "checking if we need to auto-promote the template's readme..."
 source "$GEET_LIB/pre-commit/auto-promote-readme.sh"

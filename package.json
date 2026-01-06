@@ -1,6 +1,6 @@
 {
   "name": "geet-geet",
-  "version": "0.6.0",
+  "version": "1.0.0",
   "private": false,
   "bin": {
     "geet": "bin/geet.sh",
@@ -9,6 +9,7 @@
   "files": [
     "bin/",
     "lib/",
+    "layer/",
     "README.md",
     "docs/"
   ]

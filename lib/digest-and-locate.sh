@@ -13,7 +13,6 @@
 #   $TEMPLATE_DIR                     # e.g. MyApp/.mytemplate
 #   $DOTGIT                           # e.g. MyApp/.mytemplate/dot-git
 #   $GEET_GIT                         # e.g. MyApp/.mytemplate/geet-git.sh
-#   $SOFT_DETACHED          # e.g. MyApp/.mytemplate/dot-git/info/geet-protected
 #
 # === CONFIG VALUES (from MyApp/.mytemplate/.geet-template.env and .geet-metadata.env) ===
 #   $TEMPLATE_NAME                    # e.g. "mytemplate" from MyApp/.mytemplate/.geet-template.env
@@ -359,7 +358,6 @@ if [[ -n "$TEMPLATE_DIR" ]]; then
   # Derive paths (fast string operations, no external commands)
   DOTGIT="$TEMPLATE_DIR/dot-git"
   GEET_GIT="$TEMPLATE_DIR/geet-git.sh"
-  SOFT_DETACHED="$DOTGIT/info/geet-protected"
   APP_DIR="${APP_DIR:-$(cd "$(dirname -- "$TEMPLATE_DIR")" && pwd -P)}"
   APP_NAME="${APP_NAME:-$(basename -- "$APP_DIR")}"
 
@@ -373,7 +371,6 @@ if [[ -n "$TEMPLATE_DIR" ]]; then
 else
   DOTGIT=""
   GEET_GIT=""
-  SOFT_DETACHED=""
 
   # Even without a template dir, try to detect APP_DIR from git root
   GIT_ROOT="$(find_git_root)"

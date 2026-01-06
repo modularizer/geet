@@ -66,7 +66,7 @@ fail() { bad "$*"; HAS_ERRORS=1; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # Print a short list of dot-directories that look like layers
-# A "layer" is defined as: hidden dir at repo root containing git.sh
+# A "layer" is defined as: hidden dir at repo APP_DIR containing git.sh
 detect_layers() {
   # Only look one level deep, and only at hidden dirs.
   # (We intentionally ignore .git and other common dotdirs.)
@@ -93,7 +93,7 @@ app_tracks_path() {
 # Start
 ###############################################################################
 
-info "repo root: $APP_DIR"
+info "repo APP_DIR: $APP_DIR"
 info "this layer: $TEMPLATE_NAME"
 
 echo
@@ -121,7 +121,7 @@ else
 fi
 
 # Check for post-init hook
-POST_INIT_SH="$LAYER_DIR/post-init.sh"
+POST_INIT_SH="$TEMPLATE_DIR/post-init.sh"
 if [[ -f "$POST_INIT_SH" ]]; then
   if [[ -x "$POST_INIT_SH" ]]; then
     ok "post-init hook present and executable: $POST_INIT_SH"
@@ -165,10 +165,10 @@ echo
 # We warn hard if it's tracked or if ignore rules look missing.
 if [[ -d "$DOTGIT" ]]; then
   # If ANY files under dot-git are tracked, that's a serious problem.
-  # Check the exact path relative to root
-  rel_dotgit="${DOTGIT#"$ROOT/"}"
+  # Check the exact path relative to APP_DIR
+  rel_dotgit="${DOTGIT#"$APP_DIR/"}"
 
-  if app_tracks_path "$rel_dotgit" || git -C "$ROOT" ls-files -- "$rel_dotgit" | grep -q .; then
+  if app_tracks_path "$rel_dotgit" || git -C "$APP_DIR" ls-files -- "$rel_dotgit" | grep -q .; then
     fail "SECURITY: app repo is tracking $rel_dotgit (must be ignored; remove from git history)"
     info "fix (careful):"
     info "  git rm -r --cached -- \"$rel_dotgit\""
@@ -179,14 +179,14 @@ if [[ -d "$DOTGIT" ]]; then
 
   # Also check that app ignore rules contain something like dot-git
   # This is a heuristic (gitignore can be split across files), so it's a warning not failure.
-  if [[ -f "$ROOT/.geetexclude" ]]; then
-    if grep -Eq '(^|\s)(\*\*/dot-git/|\.geet/dot-git/|dot-git/)\s*$' "$ROOT/.geetexclude"; then
-      ok "app .geetexclude appears to ignore dot-git/"
+  if [[ -f "$APP_DIR/.gitignore" ]]; then
+    if grep -Eq '(^|\s)(\*\*/dot-git/|\.geet/dot-git/|dot-git/)\s*$' "$APP_DIR/.gitignore"; then
+      ok "app .gitignore appears to ignore dot-git/"
     else
-      warn "app .geetexclude does not obviously ignore dot-git/ (recommended: **/dot-git/)"
+      warn "app .gitignore does not obviously ignore dot-git/ (recommended: **/dot-git/)"
     fi
   else
-    warn "app .geetexclude missing (recommended: ignore **/dot-git/)"
+    warn "app .gitignore missing (recommended: ignore **/dot-git/)"
   fi
 fi
 
@@ -219,7 +219,7 @@ echo
 ###############################################################################
 # 5) Report other detected layers (informational)
 ###############################################################################
-info "detected layers at repo root:"
+info "other detected layers at repo APP_DIR:"
 layers="$(detect_layers || true)"
 if [[ -z "$layers" ]]; then
   info "  (none found)"

@@ -76,13 +76,6 @@ get_file_status() {
       echo "detached"
       return
     fi
-
-    # Check if soft-detached
-    local merge_attr=$(git --git-dir="$DOTGIT" --work-tree="$APP_DIR" check-attr merge -- "$file" 2>/dev/null | awk -F': ' '{print $3}')
-    if [[ "$merge_attr" == "keep-ours" ]]; then
-      echo "slid"
-      return
-    fi
   fi
 
   # Check if modified
@@ -148,7 +141,6 @@ inspect_directory() {
       clean) template_colored="${c_green}clean${c_reset}" ;;
       modified) template_colored="${c_yellow}modified${c_reset}" ;;
       detached) template_colored="${c_yellow}detached${c_reset}" ;;
-      slid) template_colored="${c_cyan}slid${c_reset}" ;;
       excluded) template_colored="${c_gray}excluded${c_reset}" ;;
       untracked) template_colored="${c_red}untracked${c_reset}" ;;
       deleted) template_colored="${c_red}deleted${c_reset}" ;;
@@ -236,7 +228,6 @@ inspect_glob() {
       clean) template_colored="${c_green}clean${c_reset}" ;;
       modified) template_colored="${c_yellow}modified${c_reset}" ;;
       detached) template_colored="${c_yellow}detached${c_reset}" ;;
-      slid) template_colored="${c_cyan}slid${c_reset}" ;;
       excluded) template_colored="${c_gray}excluded${c_reset}" ;;
       untracked) template_colored="${c_red}untracked${c_reset}" ;;
       deleted) template_colored="${c_red}deleted${c_reset}" ;;
@@ -283,7 +274,7 @@ Examples:
 Single file output includes:
 - File modification time (mtime)
 - Tracking status (tracked|excluded|ignored|untracked) for both repos
-- Detachment state for template repo (attached|slid|detached)
+- Detachment state for template repo (attached|detached)
 - Last commit hash and commit time for each repo
 - Git status (clean|modified|deleted|added)
 - Content comparison across all three states (working tree, template HEAD, app HEAD)
@@ -295,13 +286,12 @@ Directory/glob output shows one line per file from all three sources:
 - Working tree (filesystem)
 
 Status indicators:
-- Template: clean|modified|detached|slid|excluded|untracked|deleted
+- Template: clean|modified|detached|excluded|untracked|deleted
 - App: clean|modified|ignored|untracked|deleted
 
 Color coding:
   - Green: clean
   - Yellow: modified, detached
-  - Cyan: slid
   - Red: untracked, deleted
   - Gray: excluded, ignored
 
@@ -387,11 +377,7 @@ if [[ -d "$DOTGIT" ]]; then
     else
       # Check if soft-detached (merge=keep-ours)
       merge_attr=$(git --git-dir="$DOTGIT" --work-tree="$APP_DIR" check-attr merge -- "$path" 2>/dev/null | awk -F': ' '{print $3}')
-      if [[ "$merge_attr" == "keep-ours" ]]; then
-        echo "  ${c_cyan}state: slid${c_reset}"
-      else
-        echo "  ${c_green}state: attached${c_reset}"
-      fi
+      echo "  ${c_green}state: attached${c_reset}"
     fi
 
     # Get the commit hash and time for this file (last commit that touched it)

@@ -92,12 +92,7 @@ case "$cmd" in
     install "${GEET_ARGS[@]}"
     ;;
 
-  soft-detach|soft_detach|slide)
-    source "$GEET_LIB/detach.sh"
-    soft_detach "${GEET_ARGS[@]:1}"
-    ;;
-
-  detach|hard-detach)
+  detach)
     source "$GEET_LIB/detach.sh"
     detach "${GEET_ARGS[@]:1}"
     ;;
@@ -106,11 +101,6 @@ case "$cmd" in
       source "$GEET_LIB/detach.sh"
       detached "${GEET_ARGS[@]:1}"
       ;;
-
-  soft-detached|soft_detached|slid)
-        source "$GEET_LIB/detach.sh"
-        soft_detached "${GEET_ARGS[@]:1}"
-        ;;
 
   retach)
       source "$GEET_LIB/detach.sh"
@@ -136,10 +126,15 @@ case "$cmd" in
     log "geet commands will now only work in the generic sense to create or init new projects, but will have no reference of the template repo"
       ;;
 
-  bug|feature|issue|whoops|suggest)
+  report|bug|feature|issue|whoops|suggest)
     source "$GEET_LIB/whoops.sh"
     open_issue "${GEET_ARGS[@]:1}"
     ;;
+
+  accept)
+      source "$GEET_LIB/accept.sh"
+      accept "${GEET_ARGS[@]:1}"
+      ;;
 
   # Explicit escape hatch
   git)
@@ -150,11 +145,6 @@ case "$cmd" in
   include)
     source "$GEET_LIB/include.sh"
     include "${GEET_ARGS[@]:1}"
-    ;;
-
-  ignored|included|excluded)
-    source "$GEET_LIB/ignored.sh"
-    echo "$(is_ignored "${GEET_ARGS[@]:1}")"
     ;;
 
   inspect)
