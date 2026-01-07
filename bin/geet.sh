@@ -111,14 +111,6 @@ case "$cmd" in
     source "$GEET_LIB/pre-commit/hook.sh"
     ;;
 
-  remove|rm)
-    brave_guard "removing the template tracking" "Are you sure you want to call \`rm -rf \"$TEMPLATE_DIR\"\`?"
-    log "You asked for it! Deleting $TEMPLATE_DIR"
-    rm -rf "$TEMPLATE_DIR"
-    log "You have FULLY detached from the template and removed the git tracking of the template repo"
-    log "geet commands will now only work in the generic sense to create or init new projects, but will have no reference of the template repo"
-    ;;
-
   destroy)
     log "You asked for it! Deleting $TEMPLATE_DIR"
     rm -rf "$TEMPLATE_DIR"

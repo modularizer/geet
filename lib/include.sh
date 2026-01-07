@@ -108,7 +108,69 @@ EOF
 
     (( ${#matches[@]} > 0 )) || die "no files matched: $arg"
 
+    # Check patterns before adding files
+    file_patterns="${PREVENT_COMMIT_FILE_PATTERNS:-}"
+    content_patterns="${PREVENT_COMMIT_CONTENT_PATTERNS:-}"
 
+    if [[ -n "$file_patterns" ]] || [[ -n "$content_patterns" ]]; then
+      errors=()
+
+      for path in "${matches[@]}"; do
+        path_rel="$(rel_path "$path")"
+
+        # Check file patterns (pipe-delimited)
+        if [[ -n "$file_patterns" ]]; then
+          IFS='|' read -ra patterns <<< "$file_patterns"
+          for pattern in "${patterns[@]}"; do
+            [[ -z "$pattern" ]] && continue
+            if echo "$path_rel" | grep -qE "$pattern"; then
+              errors+=("FILE: $path_rel matches pattern: $pattern")
+            fi
+          done
+        fi
+
+        # Check content patterns (pipe-delimited)
+        if [[ -n "$content_patterns" ]]; then
+          IFS='|' read -ra patterns <<< "$content_patterns"
+          for pattern in "${patterns[@]}"; do
+            [[ -z "$pattern" ]] && continue
+
+            # Skip if file doesn't exist
+            [[ -f "$path" ]] || continue
+
+            # Skip binary files
+            if file --mime "$path" 2>/dev/null | grep -q 'charset=binary'; then
+              continue
+            fi
+
+            # Skip template config
+            [[ "$path_rel" == *template-config.env ]] && continue
+
+            # Search for pattern in file content
+            matches_content=$(grep -nE "$pattern" "$path" 2>/dev/null || true)
+            if [[ -n "$matches_content" ]]; then
+              while IFS= read -r match; do
+                errors+=("CONTENT: $path_rel matches pattern: $pattern"$'\n'"  → $match")
+              done <<< "$matches_content"
+            fi
+          done
+        fi
+      done
+
+      # If errors found, fail the include
+      if [[ ${#errors[@]} -gt 0 ]]; then
+        echo "❌ [$GEET_ALIAS include] Found patterns that may indicate app-specific code:" >&2
+        echo >&2
+        for error in "${errors[@]}"; do
+          echo "  $error" >&2
+        done
+        echo >&2
+        echo "These patterns suggest implementation-specific code that shouldn't be in the template." >&2
+        echo >&2
+        echo "To fix: Remove the matched patterns or update .template-config.env" >&2
+        exit 1
+      fi
+    fi
 
     for path in "${matches[@]}"; do
       raw_path="$path"                 # keep what compgen returned
