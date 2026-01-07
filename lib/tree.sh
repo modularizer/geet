@@ -58,22 +58,90 @@ is_tracked() {
 ###############################################################################
 print_tree_from_paths() {
   # Expect newline-separated relative paths on stdin.
-  # Prints a simple ascii tree (directories/files) without requiring `tree`.
-  # Sort first, then process with awk (portable - no asorti needed)
+  # Prints a tree with box-drawing characters (├──, └──, │)
   sort | awk '
     BEGIN { FS="/"; }
     {
       split($0, parts, "/")
-      prefix = ""
-      for (j = 1; j <= length(parts); j++) {
-        node = prefix parts[j]
-        if (!(node in seen)) {
-          indent = ""
-          for (k = 1; k < j; k++) indent = indent "  "
-          print indent parts[j]
-          seen[node] = 1
+      depth = length(parts)
+
+      # Store all paths to determine which are last at each level
+      paths[NR] = $0
+      maxdepth[NR] = depth
+      for (j = 1; j <= depth; j++) {
+        levels[NR,j] = parts[j]
+      }
+    }
+    END {
+      # Print the tree
+      for (i = 1; i <= NR; i++) {
+        split(paths[i], parts, "/")
+        depth = maxdepth[i]
+        prefix = ""
+
+        for (j = 1; j <= depth; j++) {
+          node = prefix parts[j]
+
+          if (!(node in printed)) {
+            # Determine if this is the last item at this level
+            is_last = 1
+            check_prefix = prefix
+            for (k = i + 1; k <= NR; k++) {
+              if (maxdepth[k] >= j) {
+                other_prefix = ""
+                for (m = 1; m < j; m++) {
+                  other_prefix = other_prefix levels[k,m] "/"
+                }
+                if (other_prefix == check_prefix && levels[k,j] != parts[j]) {
+                  is_last = 0
+                  break
+                }
+              }
+            }
+
+            # Build the indent with proper tree characters
+            indent = ""
+            for (k = 1; k < j; k++) {
+              # Check if level k has more siblings after current path
+              has_sibling = 0
+              kprefix = ""
+              for (m = 1; m < k; m++) {
+                kprefix = kprefix levels[i,m] "/"
+              }
+              for (n = i + 1; n <= NR; n++) {
+                if (maxdepth[n] >= k) {
+                  nprefix = ""
+                  for (m = 1; m < k; m++) {
+                    nprefix = nprefix levels[n,m] "/"
+                  }
+                  if (nprefix == kprefix && levels[n,k] != levels[i,k]) {
+                    has_sibling = 1
+                    break
+                  }
+                }
+              }
+
+              if (has_sibling) {
+                indent = indent "│   "
+              } else {
+                indent = indent "    "
+              }
+            }
+
+            # Add the branch character
+            if (j > 1) {
+              if (is_last) {
+                indent = indent "└── "
+              } else {
+                indent = indent "├── "
+              }
+            }
+
+            print indent parts[j]
+            printed[node] = 1
+          }
+          prefix = node "/"
         }
-        prefix = node "/"
       }
     }
   '
