@@ -1,0 +1,3 @@
+[submodule "demos/soccer"]
+	path = demos/soccer
+	url = https://github.com/modularizer/geet-soccer-demo

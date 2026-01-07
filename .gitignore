@@ -3,4 +3,9 @@
 .vscode/
 config.env
 **/dot-git/
+**/untracked-template-config.env!.sport/
+!.sport/*
+.sport/dot-git
 **/untracked-template-config.env
+*.template.*
+!.sport/

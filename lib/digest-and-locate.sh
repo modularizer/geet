@@ -277,10 +277,12 @@ detect_template_dir_from_cwd() {
       fi
 
       # early exit: this is a git repo root, but no template here
-      if [[ -d "$dir/.git" ]]; then
+      locate "checking $dir for a .git"
+      if [[ -e "$dir/.git" ]]; then
         locate "found .git at $dir but no template dir — stopping search"
         break
       fi
+      locate "did not find $dir/.git"
 
       # reached filesystem root → stop
       if [[ "$dir" == "/" ]]; then
@@ -340,7 +342,7 @@ debug "TEMPLATE_DIR=$TEMPLATE_DIR"
 find_git_root() {
   local dir="$PWD"
   while [[ "$dir" != "/" ]]; do
-    if [[ -d "$dir/.git" ]]; then
+    if [[ -e "$dir/.git" ]]; then
       printf '%s' "$dir"
       return 0
     fi
