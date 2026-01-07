@@ -143,7 +143,7 @@ debug "new template layer will be created at: $NEW_LAYER_DIR"
 ###############################################################################
 
 # Check if we have a git repo in current directory
-if [[ ! -d "$APP_DIR/.git" ]]; then
+if [[ ! -e "$APP_DIR/.git" ]]; then
   log "no git repo found at $APP_DIR/.git"
   log "initializing new git repo..."
   git -C "$APP_DIR" init >/dev/null
@@ -213,6 +213,7 @@ write_geet_template_env() {
 
 # Create template .env configuration files
 write_geet_template_env
+cp "$GEET_LIB/../layer/semitracked-template-config.env" "$NEW_LAYER_DIR/semitracked-template-config.env"
 log "created template .env configuration files"
 
 # Create or copy .geetinclude from base template
@@ -260,7 +261,7 @@ debug "added files"
 NEW_DOTGIT="$NEW_LAYER_DIR/dot-git"
 debug "NEW_DOTGIT=$NEW_DOTGIT"
 
-if [ -d "$APP_DIR/.git" ]; then
+if [ -e "$APP_DIR/.git" ]; then
   log "temporarily moving $APP_DIR/.git to $APP_DIR/not-git"
   mv "$APP_DIR/.git" "$APP_DIR/not-git"
 fi
@@ -271,7 +272,7 @@ git init --separate-git-dir="$NEW_DOTGIT" "$APP_DIR"
 log "removing the pointer file that git leaves behind when --separate-git-dir is specified"
 rm "$APP_DIR/.git"
 
-if [ -d "$APP_DIR/not-git" ]; then
+if [ -e "$APP_DIR/not-git" ]; then
   log "restoring our original git dir from $APP_DIR/not-git back to $APP_DIR/.git"
   mv "$APP_DIR/not-git" "$APP_DIR/.git"
 fi

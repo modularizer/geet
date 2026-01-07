@@ -12,7 +12,9 @@ geet_git="$TEMPLATE_DIR/geet-git.sh"
 _GEET_CMD="$(command -v geet)"
 NODE_BIN="$(cd -- "$(dirname -- "${_GEET_CMD}")" && pwd)"
 GEET_LIB="$(cd -- "$NODE_BIN/../lib/node_modules/geet-geet/lib" && pwd)"
-source "$TEMPLATE_DIR/template-config.env"
+[[ -e "$TEMPLATE_DIR/template-config.env" ]] && source "$TEMPLATE_DIR/template-config.env"
+[[ -e "$TEMPLATE_DIR/semitracked-template-config.env" ]] && source "$TEMPLATE_DIR/semitracked-template-config.env"
+[[ -e "$TEMPLATE_DIR/untracked-template-config.env" ]] && source "$TEMPLATE_DIR/untracked-template-config.env"
 
 
 

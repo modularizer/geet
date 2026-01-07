@@ -310,19 +310,6 @@ fi
 # Extract --geet-dir <value> from args (mutates caller positional params)
 has_flag --geet-dir TEMPLATE_DIR
 
-# FAST PATH: Try to load cached TEMPLATE_DIR from untracked-template-config.env
-if [[ -z "$TEMPLATE_DIR" ]]; then
-  debug "no --geet-dir flag, trying fast path (cached untracked-template-config.env)"
-  search_dir="$PWD"
-  while [[ "$search_dir" != "/" ]]; do
-    if load_env_file "$search_dir/untracked-template-config.env"; then
-      debug "cache hit: loaded $search_dir/untracked-template-config.env"
-      break
-    fi
-    search_dir="$(dirname "$search_dir")"
-  done
-fi
-
 # SLOW PATH: Directory walking (only if cache miss)
 if [[ -z "$TEMPLATE_DIR" ]]; then
   debug "cache miss - detecting template dir (slow path)"
@@ -355,6 +342,7 @@ find_git_root() {
 if [[ -n "$TEMPLATE_DIR" ]]; then
   # Load template .env files in precedence order (lowest to highest)
   load_env_file "$TEMPLATE_DIR/template-config.env"
+  load_env_file "$TEMPLATE_DIR/semitracked-template-config.env"
   load_env_file "$TEMPLATE_DIR/untracked-template-config.env"  # Highest precedence
 
   # Derive paths (fast string operations, no external commands)

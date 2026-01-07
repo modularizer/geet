@@ -57,3 +57,4 @@
 #-----------------------------------------------------------------------------------------------------------------------
 **/dot-git/
 **/untracked-template-config.env
+!.$LAYER_NAME/semitracked-template-config.env

@@ -6,8 +6,15 @@
 # Configure by adding PREVENT_COMMIT_FILE_PATTERNS and PREVENT_COMMIT_CONTENT_PATTERNS to .geet-template.env
 protect_patterns(){
   # Read patterns from env vars (pipe-delimited)
-  file_patterns="${PREVENT_COMMIT_FILE_PATTERNS:-}"
-  content_patterns="${PREVENT_COMMIT_CONTENT_PATTERNS:-}"
+  file_patterns="${PREVENT_COMMIT_FILE_PATTERNS_1:-}|${PREVENT_COMMIT_FILE_PATTERNS_2:-}"
+  file_patterns="${file_patterns#|}"
+  file_patterns="${file_patterns%|}"
+  file_patterns="${PREVENT_COMMIT_FILE_PATTERNS:-"$file_patterns"}"
+
+  content_patterns="${PREVENT_COMMIT_CONTENT_PATTERNS_1:-}|${PREVENT_COMMIT_CONTENT_PATTERNS_2:-}"
+  content_patterns="${content_patterns#|}"
+  content_patterns="${content_patterns%|}"
+  content_patterns="${PREVENT_COMMIT_CONTENT_PATTERNS:-"$content_patterns"}"
 
   if [[ -n "$file_patterns" ]] || [[ -n "$content_patterns" ]]; then
 
@@ -24,7 +31,7 @@ protect_patterns(){
         while IFS= read -r file; do
           [[ -z "$file" ]] && continue
 #          echo "checking $file against pattern $pattern"
-          if echo "$file" | grep -qE "$pattern"; then
+          if echo "$file" | grep -qiE "$pattern"; then
             errors+=("FILE: $file matches pattern: $pattern")
           fi
         done <<< "$staged_files"
@@ -52,7 +59,7 @@ protect_patterns(){
           [[ "$file" == *template-config.env ]] && continue
 
           # Search for pattern in staged content
-          matches=$("$geet_git" show ":$file" 2>/dev/null | grep -nE "$pattern" || true)
+          matches=$("$geet_git" show ":$file" 2>/dev/null | grep -niE "$pattern" || true)
           if [[ -n "$matches" ]]; then
             while IFS= read -r match; do
               errors+=("CONTENT: $file matches pattern: $pattern"$'\n'"  → $match")

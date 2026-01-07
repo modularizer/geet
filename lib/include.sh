@@ -109,8 +109,15 @@ EOF
     (( ${#matches[@]} > 0 )) || die "no files matched: $arg"
 
     # Check patterns before adding files
-    file_patterns="${PREVENT_COMMIT_FILE_PATTERNS:-}"
-    content_patterns="${PREVENT_COMMIT_CONTENT_PATTERNS:-}"
+    file_patterns="${PREVENT_COMMIT_FILE_PATTERNS_1:-}|${PREVENT_COMMIT_FILE_PATTERNS_2:-}"
+    file_patterns="${file_patterns#|}"
+    file_patterns="${file_patterns%|}"
+    file_patterns="${PREVENT_COMMIT_FILE_PATTERNS:-"$file_patterns"}"
+
+    content_patterns="${PREVENT_COMMIT_CONTENT_PATTERNS_1:-}|${PREVENT_COMMIT_CONTENT_PATTERNS_2:-}"
+    content_patterns="${content_patterns#|}"
+    content_patterns="${content_patterns%|}"
+    content_patterns="${PREVENT_COMMIT_CONTENT_PATTERNS:-"$content_patterns"}"
 
     if [[ -n "$file_patterns" ]] || [[ -n "$content_patterns" ]]; then
       errors=()
@@ -123,7 +130,7 @@ EOF
           IFS='|' read -ra patterns <<< "$file_patterns"
           for pattern in "${patterns[@]}"; do
             [[ -z "$pattern" ]] && continue
-            if echo "$path_rel" | grep -qE "$pattern"; then
+            if echo "$path_rel" | grep -qiE "$pattern"; then
               errors+=("FILE: $path_rel matches pattern: $pattern")
             fi
           done
@@ -147,7 +154,7 @@ EOF
             [[ "$path_rel" == *template-config.env ]] && continue
 
             # Search for pattern in file content
-            matches_content=$(grep -nE "$pattern" "$path" 2>/dev/null || true)
+            matches_content=$(grep -niE "$pattern" "$path" 2>/dev/null || true)
             if [[ -n "$matches_content" ]]; then
               while IFS= read -r match; do
                 errors+=("CONTENT: $path_rel matches pattern: $pattern"$'\n'"  → $match")
