@@ -99,6 +99,7 @@ EOF
   # OPTION 5: just a repo name, e.g. "mytemplate", use get_gh_user then convert to "$GH_USER/mytemplate"
 
   if [[ -e "$repo" ]]; then
+    log "$repo exists as a folder"
     # OPTION 1: local path exists, use as-is
     :
   elif [[ "$repo" == http* ]]; then
@@ -139,7 +140,8 @@ EOF
   log "cloning template repo:"
   log "  repo: $repo"
   log "  dir:  $dir"
-  git clone "${clone_args[@]}" "$repo" "$dir"
+  log "git clone \"$repo\" \"$dir\""
+  git clone "$repo" "$dir"
   log "calling \`cd \"$dir\"\`"
   cd "$dir" || exit
   log "pwd: $(pwd)"

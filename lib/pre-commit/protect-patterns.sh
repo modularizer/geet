@@ -80,7 +80,7 @@ protect_patterns(){
       echo "These patterns suggest implementation-specific code that shouldn't be in the template." >&2
       echo >&2
       echo "To bypass this check: geet commit --no-verify" >&2
-      echo "To fix: Remove the matched patterns or update .geet-template.env" >&2
+      echo "To fix: Remove the matched patterns or update template-config.env, semitracked-template-config.env, or untracked-template-config.env" >&2
       exit 1
     fi
   fi

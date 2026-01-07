@@ -115,7 +115,7 @@ It walks through:
 * installing the template and converting it into a new app (`myapp2`), similar to the original app (`myapp`)
 * pulling/pushing changes between your three repos (`myapp`, `mytemplate`, and `myapp2`)
 
-👉 **Start here:** [Demo](/docs/DEMO.md)
+👉 **Start here:** [Demo](/demos/DEMO.md)
 
 You’ll “get it” in 5 minutes (hopefully).
 
@@ -165,7 +165,7 @@ geet
 7. [Preventing app-specific commits](/docs/PREVENT_COMMIT_PATTERNS.md)
 8. [Contributing](/docs/CONTRIBUTING.md)
 9. [FAQ](/docs/FAQ.md)
-10. [Demo](/docs/DEMO.md)
+10. [Demo](/demos/DEMO.md)
 
 ---
 

@@ -51,4 +51,3 @@ allowing publishing a template which controls files which are interleaved in the
 ---
 
 If you're the owner of this template, feel free to overwrite or add to this README to tell users about what your project does. It's all your's from here.
-

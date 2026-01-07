@@ -66,13 +66,15 @@ trap cleanup EXIT
 
 case "$mode" in
   tracked)
-    # Export what the template repo actually tracks
+    # Export all tracked files from the index (staged + committed state)
     git --git-dir="$DOTGIT" --work-tree="$APP_DIR" ls-files > "$tmp_list"
+    export_from_index=true
     ;;
   all)
     # Export anything the whitelist includes (even if untracked)
     source "$GEET_LIB/tree.sh"
     tree list all > "$tmp_list"
+    export_from_index=false
     ;;
   *)
     die "unknown mode: $mode (use tracked|all)"
@@ -87,22 +89,37 @@ fi
 log "exporting layer '$TEMPLATE_NAME' ($mode) to: $dest"
 mkdir -p "$dest"
 
+# Copy the git directory
+cp -r "$DOTGIT" "$dest/.git"
+
 # Copy files preserving paths.
-# We use tar because it is:
-# - fast
-# - preserves directories
-# - handles lots of files well
-#
-# This avoids rsync dependency and avoids writing a bunch of mkdir/cp loops.
-(
-  cd "$APP_DIR"
-  # Use null delimiters to safely handle weird filenames
-  # Convert line-delimited list to null-delimited for tar
-  while IFS= read -r line; do
-    # Skip empty lines
-    [[ -n "$line" ]] && printf '%s\0' "$line"
-  done < "$tmp_list" | tar -cpf - --null -T - | (cd "$dest" && tar -xpf -)
-)
+if [[ "$export_from_index" == "true" ]]; then
+  # Export staged content from git index using :path syntax
+  while IFS= read -r file; do
+    [[ -n "$file" ]] || continue
+    dest_file="$dest/$file"
+    dest_dir="$(dirname "$dest_file")"
+    mkdir -p "$dest_dir"
+    git --git-dir="$DOTGIT" --work-tree="$APP_DIR" show ":$file" > "$dest_file"
+  done < "$tmp_list"
+else
+  # Export from working tree using tar
+  # We use tar because it is:
+  # - fast
+  # - preserves directories
+  # - handles lots of files well
+  #
+  # This avoids rsync dependency and avoids writing a bunch of mkdir/cp loops.
+  (
+    cd "$APP_DIR"
+    # Use null delimiters to safely handle weird filenames
+    # Convert line-delimited list to null-delimited for tar
+    while IFS= read -r line; do
+      # Skip empty lines
+      [[ -n "$line" ]] && printf '%s\0' "$line"
+    done < "$tmp_list" | tar -cpf - --null -T - | (cd "$dest" && tar -xpf -)
+  )
+fi
 
 # Write a small manifest for auditing
 {

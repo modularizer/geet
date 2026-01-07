@@ -117,7 +117,7 @@ inspect_directory() {
         geet_git ls-files 2>/dev/null | grep "^${dir}" || true
       fi
       # Files from app repo HEAD
-      if [[ -d "$APP_DIR/.git" ]]; then
+      if git -C "$APP_DIR" rev-parse --git-dir >/dev/null 2>&1; then
         git -C "$APP_DIR" ls-files 2>/dev/null | grep "^${dir}" || true
       fi
       # Files from working tree (excluding .git and dot-git directories)
@@ -190,7 +190,7 @@ inspect_glob() {
         done
       fi
       # Files from app repo HEAD matching pattern
-      if [[ -d "$APP_DIR/.git" ]]; then
+      if git -C "$APP_DIR" rev-parse --git-dir >/dev/null 2>&1; then
         git -C "$APP_DIR" ls-files 2>/dev/null | while IFS= read -r file; do
           shopt -s globstar nullglob
           case "$file" in
@@ -426,8 +426,8 @@ fi
 echo
 
 # App repo inspection
-# Find app repo .git directory
-if [[ -d "$APP_DIR/.git" ]]; then
+# Check if APP_DIR is a git repo (handles both .git directory and gitfile)
+if git -C "$APP_DIR" rev-parse --git-dir >/dev/null 2>&1; then
   app_name="${APP_NAME:-app}"
   echo "${c_bold}App repo${c_reset} ${c_blue}($app_name)${c_reset}:"
 

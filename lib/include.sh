@@ -83,8 +83,15 @@ EOF
   root=$(dirname -- "${TEMPLATE_DIR%/}")
   need_dotgit
   sync_exclude
+  has_flag --discreet DISCREET
+  has_flag --discrete DISCRETE
+  has_flag -f FORCE
+  if [[ -n "$DISCRETE" ]]; then
+    die "Whoops! did you mean --discreet?"
+  fi
+  sync_exclude
   # first, modify .geetinclude
-  for arg in "$@"; do
+  for arg in "${GEET_ARGS[@]}"; do
     matches=()
 
     # If user passed a directory (no glob chars), recurse it
@@ -174,11 +181,11 @@ EOF
         echo >&2
         echo "These patterns suggest implementation-specific code that shouldn't be in the template." >&2
         echo >&2
-        echo "To fix: Remove the matched patterns or update .template-config.env" >&2
+        echo "To fix: Remove the matched patterns or update template-config.env, semitracked-template-config.env, or untracked-template-config.env" >&2
         exit 1
       fi
     fi
-
+    sync_exclude
     for path in "${matches[@]}"; do
       raw_path="$path"                 # keep what compgen returned
       path_rel="$(rel_path "$raw_path")"
@@ -218,6 +225,13 @@ EOF
       add_path_rel="$(rel_path "$path_dir/$add_base")"
 
       debug "checking for $add_path_rel in $TEMPLATE_DIR/.geetinclude"
+      if ! grep -qxF "$add_path_rel" "$TEMPLATE_DIR/.geetinclude"; then
+
+        debug "adding $add_path_rel to $TEMPLATE_DIR/.geetinclude"
+
+        # add to our include file
+        printf '%s\n' "$add_path_rel" >> "$TEMPLATE_DIR/.geetinclude"
+      fi
       if ! grep -qxF "$add_path_rel" "$TEMPLATE_DIR/.geetinclude"; then
 
         debug "adding $add_path_rel to $TEMPLATE_DIR/.geetinclude"
@@ -279,7 +293,23 @@ EOF
 
           if [[ "$add_path_rel" == "$path_rel" ]]; then
             debug "calling git add"
-            geet_git add -- "$add_path_rel"
+            if [[ -n "$DISCREET" ]]; then
+              if [[ -n "$APP_GIT_INFO_EXCLUDE" ]]; then
+                if ! grep -qxF "$add_path_rel" "$APP_GIT_INFO_EXCLUDE"; then
+                  debug "appending $add_path_rel to $APP_GIT_INFO_EXCLUDE"
+                  echo "$add_path_rel" >> "$APP_GIT_INFO_EXCLUDE"
+                else
+                  debug "$add_path_rel already in $APP_GIT_INFO_EXCLUDE"
+                fi
+              fi
+              touch "$TEMPLATE_DIR/parent-git-info-exclude"
+              echo "$add_path_rel" >> "$TEMPLATE_DIR/parent-git-info-exclude"
+            fi
+            if [[ -n "$FORCE" ]]; then
+              geet_git add -f -- "$add_path_rel"
+            else
+              geet_git add -- "$add_path_rel"
+            fi
           else
             debug "adding $sample_path_rel as $add_path_rel"
             debug "using $path_abs"

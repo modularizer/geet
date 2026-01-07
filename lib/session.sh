@@ -1,7 +1,7 @@
 # session.sh — run commands in isolated template snapshot
 # Usage:
 #   source session.sh
-#   session run [options] -- <command...>
+#   session[options] -- <command...>
 
 session() {
 
@@ -15,7 +15,7 @@ This creates a temporary isolated copy of just the template files,
 runs your command there, and optionally copies results back.
 
 Usage:
-  $GEET_ALIAS session run [options] -- <command...>
+  $GEET_ALIAS session [options] -- <command...>
 
 Options:
   --mode tracked|all      split mode (default: tracked)
@@ -30,19 +30,18 @@ Use cases:
   - Generate files that should live only in the template
 
 Examples:
-  $GEET_ALIAS session run -- npm run build
-  $GEET_ALIAS session run --mode all -- npm test
-  $GEET_ALIAS session run --copy-back dist:dist -- npm run build
-  $GEET_ALIAS session run --keep -- npm run build
+  $GEET_ALIAS session -- npm run build
+  $GEET_ALIAS session --mode all -- npm test
+  $GEET_ALIAS session --copy-back dist:dist -- npm run build
+  $GEET_ALIAS session --keep -- npm run build
 EOF
 }
 
-sub="${1:-help}"; shift || true
+sub="${1:-help}";
 if [[ "$sub" == "help" || "$sub" == "-h" || "$sub" == "--help" ]]; then
   usage
   return 0
 fi
-[[ "$sub" == "run" ]] || { usage; return 1; }
 
 mode="tracked"
 tmp=""

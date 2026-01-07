@@ -85,6 +85,9 @@ DEFAULT_GH_USER="<repo-owner>"
 DDD_APP_NAME="MyApp"
 DDD_TEMPLATE_NAME="mytemplate"
 TEMPLATE_NAME=""
+APP_GIT_DIR=$(git rev-parse --git-dir 2>/dev/null || true)
+APP_GIT_INFO_EXCLUDE=""
+[[ -n "$APP_GIT_DIR" ]] && APP_GIT_INFO_EXCLUDE="$APP_GIT_DIR/info/exclude"
 
 # Directory this script lives in (.geet/lib)
 SRC="${BASH_SOURCE[0]}"

@@ -69,7 +69,7 @@ case "$cmd" in
     doctor "${GEET_ARGS[@]:1}"
     ;;
 
-  prework)
+  prework|valueof)
     source "$GEET_LIB/prework.sh"
     prework "${GEET_ARGS[@]:1}"
     ;;
@@ -136,7 +136,8 @@ case "$cmd" in
 
   include)
     source "$GEET_LIB/include.sh"
-    include "${GEET_ARGS[@]:1}"
+    GEET_ARGS=("${GEET_ARGS[@]:1}")
+    include "${GEET_ARGS[@]}"
     ;;
 
   inspect)

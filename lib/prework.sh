@@ -111,6 +111,8 @@ prework() {
     # App Directory
     print_header "APP DIRECTORY"
     print_var APP_DIR "Your app's root directory"
+    print_var APP_GIT_DIR "Your app's git directory"
+    print_var APP_GIT_INFO_EXCLUDE "Your app's git directory"
     print_var APP_NAME "Name of your app"
 
     # Config values
