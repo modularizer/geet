@@ -11,6 +11,8 @@
 > Nothing moves. Nothing is copied.
 > Only Git’s *view* of the files changes.
 
+[YouTube Tutorial](https://www.youtube.com/watch?v=bEacWh8Kdug)
+
 ---
 
 ## What problem does geet solve?
