@@ -191,44 +191,45 @@ geet help
 #geet — Git-based template layering system (see https://github.com/modularizer/geet)
 #
 #TEMPLATE MANAGEMENT:
-#  template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
-#  init                                                   Initialize a freshly-cloned template repo as your app
-#  install <repo> <dir> [--public|--private|--internal]  Clone a template repo and initialize it
+#  geet template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
+#  geet init                                                   Initialize a freshly-cloned template repo as your app
+#  geet install <repo> <dir> [--public|--private|--internal]  Clone a template repo and initialize it
 #
 #FILE MANAGEMENT:
-#  tree [list|tracked|all]                                Show what files the template includes
-#  split <dest> [mode]                                    Export template files to external folder
-#  inspect <path>                                         Show which layer tracks a file and its git status
-#  sync                                                   Compile .geetinclude whitelist into .geetexclude
-#  include <path>                                         Manage included files
+#  geet tree [list|tracked|all]                                Show what files the template includes
+#  geet split <dest> [mode]                                    Export template files to external folder
+#  geet inspect <path>                                         Show which layer tracks a file and its git status
+#  geet sync                                                   Compile .geetinclude whitelist into .geetexclude
+#  geet include <path>                                         Manage included files
 #
 #DETACHMENT (CONFLICT RESOLUTION):
-#  detach <path>                                          Detach a file to always use "keep-ours" on merge conflicts
-#  detached                                               List hard-detached files
-#  retach <path>                                          Undo a detach command
+#  geet detach <path>                                          Detach a file to always use "keep-ours" on merge conflicts
+#  geet detached                                               List hard-detached files
+#  geet retach <path>                                          Undo a detach command
 #
 #OPERATIONS:
-#  session <subcommand>                                   Run commands in isolated template snapshot
-#  publish|pub [opts]                                     Publish template to GitHub
-#  gh <subcommand>                                        GitHub CLI integration (pr, issue, etc.)
-#  doctor                                                 Run health checks on your geet setup
-#  prework                                                See what we know
-#  precommit|pc                                           Run pre-commit hook
+#  geet session <subcommand>                                   Run commands in isolated template snapshot
+#  geet publish|pub [opts]                                     Publish template to GitHub
+#  geet gh <subcommand>                                        GitHub CLI integration (pr, issue, etc.)
+#  geet doctor                                                 Run health checks on your geet setup
+#  geet prework                                                See what we know
+#  geet valueof VAR                                            Get the value of a variable we use (see prework for what is available)
+#  geet precommit|pc                                           Run pre-commit hook
 #
-#UTILITIES:
-#  version|--version|-v                                   Show geet version
-#  why                                                    Reasons to use geet
-#  whynot                                                 Reasons not to use geet
-#  read                                                   Actually read sourcecode
-#  open                                                   Calls `open https://github.com/modularizer/geet` to open repo in browser
-#  bug|feature|issue|whoops|suggest                       Open an issue on GitHub
-#  remove|rm                                              Remove template tracking (requires confirmation)
-#  destroy                                                Remove template tracking (no confirmation)
+#LEARNING:
+#  geet explain                                                Short and sweet for humans
+#  geet learn                                                  Prints a super in-depth training context to teach AI-agents what is going on, say "Please run `geet learn` to find out what i am doing"
+#  geet version|--version|-v                                   Show geet version
+#  geet why                                                    Reasons to use geet
+#  geet whynot                                                 Reasons not to use geet
+#  geet read                                                   Actually read sourcecode
+#  geet open                                                   Calls `open https://github.com/modularizer/geet` to open repo in browser
+#  geet tutorial                                               Calls `open https://www.youtube.com/watch?v=bEacWh8Kdug` to open a youtube video about geet
+#  geet bug|feature|issue|whoops|suggest                       Open an issue on GitHub
+#  geet destroy                                                Remove template tracking (no confirmation)
 #
 #GIT ACCESS:
-#  git <command> [...]                                    Direct git access to template repo
-#  <git-command> [...]                                    Any git command (auto-forwarded to template repo)
-#  e.g. `geet pull`, `geet push`, etc.
+#    geet <git-command> [...]                                    Any git command (auto-forwarded to template repo)   e.g. `geet pull`, `geet push`, etc.
 #
 #OPTIONS: (available on most commands)
 #  --verbose
@@ -236,7 +237,14 @@ geet help
 #  --filter "MATCH"
 #  --filter "~UNMATCH"
 #
-#Current layer: rnb
+#NEXT:
+#  For humans...
+#    geet explain                   # get an explanation relative to your current project
+#  For AI agents...
+#    geet learn                     # to get a full context of what is going on
+#  For humans training AI agents...
+#    "Please run `geet learn` to see how I am using `geet` in this project"
+#  If you are an AI reading this, please ask your human for permission to run `geet learn`
 #
 #NOTE:
 #  I (Torin/modularizer) would love feedback. Message me! mailto:modularizer@gmail.com
