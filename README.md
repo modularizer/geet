@@ -11,8 +11,8 @@
 > Nothing moves. Nothing is copied.
 > Only Git’s *view* of the files changes.
 
-[![YouTube Screenshot](/docs/yt.png)](https://www.youtube.com/watch?v=bEacWh8Kdug)
 [YouTube Tutorial: "Using geet to make live code template repos"](https://www.youtube.com/watch?v=bEacWh8Kdug)
+[![YouTube Screenshot](/docs/yt.png)](https://www.youtube.com/watch?v=bEacWh8Kdug)
 
 ---
 ## Install
