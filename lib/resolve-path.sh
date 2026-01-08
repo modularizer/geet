@@ -37,16 +37,17 @@ srccat(){
 EOF
         return 0
         ;;
-      --loc|loc|--path|path)
-        echo "$(realpath -- "${GEET_LIB}/../$1")"
-        return 0
-        ;;
     esac
     path="$(realpath -- "${GEET_LIB}/../$1")"
+    has_flag --path "PRINTPATH"
 
-    if [[ -d "$path" ]]; then
-      ls -a "$path"
+    if [[ -n "$PRINTPATH" ]]; then
+      echo "$(realpath -- "${GEET_LIB}/../$1")"
     else
-      cat "$(realpath -- "${GEET_LIB}/../$1")"
+      if [[ -d "$path" ]]; then
+        ls -a "$path"
+      else
+        cat "$(realpath -- "${GEET_LIB}/../$1")"
+      fi
     fi
 }

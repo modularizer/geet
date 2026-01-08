@@ -18,8 +18,22 @@ case "$cmd" in
     help "${GEET_ARGS[@]:1}"
     ;;
 
+  explain)
+      source "$GEET_LIB/explain.sh"
+      explain
+      ;;
+
+  learn|context)
+    source "$GEET_LIB/explain.sh"
+    learn
+    ;;
+
   open)
     open "https://github.com/modularizer/geet"
+    ;;
+
+  tutorial)
+    open "https://www.youtube.com/watch?v=bEacWh8Kdug"
     ;;
 
   help|-h|--help)

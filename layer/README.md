@@ -9,6 +9,19 @@ npm install -g geet-geet
 geet install $GH_USER/$LAYER_NAME $DD_APP_NAME --private
 ```
 
+## How this works
+* `geet` points to the template repo ( **$LAYER_NAME** )
+* `git` continues to track the main app repo ( **$APP_NAME** )
+* both **$LAYER_NAME** and **$APP_NAME** share the same working directory
+* only a **subset** of files in **$APP_NAME** are tracked by the template repo
+  * use `geet include <path>` to add files to the template repo, then `geet commit`, `geet push`, etc. to update the template repo
+* occasionally, you may need a separate version of the same file...
+  * In this case, use the `.template` suffix:
+  * `app.template.tsx` gets automatically committed to the template repo as `app.tsx`
+  * `app.tsx` is the version tracked by the app repo
+* occasionally, you may want to add a file ONLY to the template repo, not the app repo
+  * use `geet include <path> --discreet` to put it in the template repo while appending to `.git/info/exclude` to ignore it in the app repo
+
 
 ## Working with geet templates
 This template was created with [geet](https://github.com/modularizer/geet),
@@ -16,7 +29,7 @@ a CLI git wrapper which acts as an alternative to git submodules,
 allowing publishing a template which controls files which are interleaved in the same working directory as your project.
 
 ### `geet` location
-Assuming `geet` was successfully installed using `npm install -g geet-geet`, you should be able to find the source code by using `geet valueof GEET_LIB`
+Assuming `geet` was successfully installed using `npm install -g geet-geet`, you should be able to find the source code by using `geet . --path`
 
 ### Benefits of `geet`
 - Pull template updates when you want, receiving fixes straight into your project

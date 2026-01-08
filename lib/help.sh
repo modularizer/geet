@@ -12,43 +12,45 @@ cat <<EOF
 $GEET_ALIAS — Git-based template layering system (see https://github.com/modularizer/geet)
 
 TEMPLATE MANAGEMENT:
-  template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
-  init                                                   Initialize a freshly-cloned template repo as your app
-  install <repo> <dir> [--public|--private|--internal]  Clone a template repo and initialize it
+  $GEET_ALIAS template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
+  $GEET_ALIAS init                                                   Initialize a freshly-cloned template repo as your app
+  $GEET_ALIAS install <repo> <dir> [--public|--private|--internal]  Clone a template repo and initialize it
 
 FILE MANAGEMENT:
-  tree [list|tracked|all]                                Show what files the template includes
-  split <dest> [mode]                                    Export template files to external folder
-  inspect <path>                                         Show which layer tracks a file and its git status
-  sync                                                   Compile .geetinclude whitelist into .geetexclude
-  include <path>                                         Manage included files
+  $GEET_ALIAS tree [list|tracked|all]                                Show what files the template includes
+  $GEET_ALIAS split <dest> [mode]                                    Export template files to external folder
+  $GEET_ALIAS inspect <path>                                         Show which layer tracks a file and its git status
+  $GEET_ALIAS sync                                                   Compile .geetinclude whitelist into .geetexclude
+  $GEET_ALIAS include <path>                                         Manage included files
 
 DETACHMENT (CONFLICT RESOLUTION):
-  detach <path>                              Detach a file to always use "keep-ours" on merge conflicts
-  detached                                               List hard-detached files
-  retach <path>                                          Undo a detach command
+  $GEET_ALIAS detach <path>                                          Detach a file to always use "keep-ours" on merge conflicts
+  $GEET_ALIAS detached                                               List hard-detached files
+  $GEET_ALIAS retach <path>                                          Undo a detach command
 
 OPERATIONS:
-  session <subcommand>                                   Run commands in isolated template snapshot
-  publish|pub [opts]                                     Publish template to GitHub
-  gh <subcommand>                                        GitHub CLI integration (pr, issue, etc.)
-  doctor                                                 Run health checks on your geet setup
-  prework                                                See what we know
-  precommit|pc                                           Run pre-commit hook
+  $GEET_ALIAS session <subcommand>                                   Run commands in isolated template snapshot
+  $GEET_ALIAS publish|pub [opts]                                     Publish template to GitHub
+  $GEET_ALIAS gh <subcommand>                                        GitHub CLI integration (pr, issue, etc.)
+  $GEET_ALIAS doctor                                                 Run health checks on your geet setup
+  $GEET_ALIAS prework                                                See what we know
+  $GEET_ALIAS valueof VAR                                            Get the value of a variable we use (see prework for what is available)
+  $GEET_ALIAS precommit|pc                                           Run pre-commit hook
 
-UTILITIES:
-  version|--version|-v                                   Show geet version
-  why                                                    Reasons to use geet
-  whynot                                                 Reasons not to use geet
-  read                                                   Actually read sourcecode
-  open                                                   Calls \`open https://github.com/modularizer/geet\` to open repo in browser
-  bug|feature|issue|whoops|suggest                       Open an issue on GitHub
-  remove|rm                                              Remove template tracking (requires confirmation)
-  destroy                                                Remove template tracking (no confirmation)
+LEARNING:
+  $GEET_ALIAS explain                                                Short and sweet for humans
+  $GEET_ALIAS learn                                                  Prints a super in-depth training context to teach AI-agents what is going on, say "Please run \`geet learn\` to find out what i am doing"
+  $GEET_ALIAS version|--version|-v                                   Show geet version
+  $GEET_ALIAS why                                                    Reasons to use geet
+  $GEET_ALIAS whynot                                                 Reasons not to use geet
+  $GEET_ALIAS read                                                   Actually read sourcecode
+  $GEET_ALIAS open                                                   Calls \`open https://github.com/modularizer/geet\` to open repo in browser
+  $GEET_ALIAS tutorial                                               Calls \`open https://www.youtube.com/watch?v=bEacWh8Kdug\` to open a youtube video about geet
+  $GEET_ALIAS bug|feature|issue|whoops|suggest                       Open an issue on GitHub
+  $GEET_ALIAS destroy                                                Remove template tracking (no confirmation)
 
 GIT ACCESS:
-  git <command> [...]                                    Direct git access to template repo
-  <git-command> [...]                                    Any git command (auto-forwarded to template repo)
+  $GEET_ALIAS <git-command> [...]                                    Any git command (auto-forwarded to template repo)
   e.g. \`geet pull\`, \`geet push\`, etc.
 
 OPTIONS: (available on most commands)
@@ -67,19 +69,21 @@ cat <<EOF
 $GEET_ALIAS — Git-based template layering system (see https://github.com/modularizer/geet)
 
 USAGE:
-  template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
-  install  <repo> <dir>  [--public|--private|--internal] Do a git clone of a repo and convert it into a repo of your own
-  tree [list|tracked|all]                                Show what files the template includes
-  split <dest> [mode]                                    Export template files to external folder
-  inspect <path>                                         Show which layer tracks a file and its git status
-  prework                                                See what we know
-  why / whynot                                           Reasons to (or not to) use geet
-  version / --version                                    Show geet version
-  help                                                   Show all available commands
-  open                                                   Calls \`open https://github.com/modularizer/geet\` to open repo in browser
+  $GEET_ALIAS explain                                                Short and sweet
+  $GEET_ALIAS template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
+  $GEET_ALIAS install  <repo> <dir>  [--public|--private|--internal] Do a git clone of a repo and convert it into a repo of your own
+  $GEET_ALIAS tree [list|tracked|all]                                Show what files the template includes
+  $GEET_ALIAS split <dest> [mode]                                    Export template files to external folder
+  $GEET_ALIAS inspect <path>                                         Show which layer tracks a file and its git status
+  $GEET_ALIAS prework                                                See what we know
+  $GEET_ALIAS why / whynot                                           Reasons to (or not to) use geet
+  $GEET_ALIAS version / --version                                    Show geet version
+  $GEET_ALIAS help                                                   Show all available commands
+  $GEET_ALIAS open                                                   Calls \`open https://github.com/modularizer/geet\` to open repo in browser
+  $GEET_ALIAS tutorial                                               Calls \`open https://www.youtube.com/watch?v=bEacWh8Kdug\` to open a youtube video about geet
 
 GIT-WRAPPER:
-  <git-command> [...]                                    Any git command (auto-forwarded to template repo)
+  $GEET_ALIAS <git-command> [...]                                    Any git command (auto-forwarded to template repo)
   e.g. \`geet pull\`, \`geet push\`, etc.
 
 OPTIONS: (available on most commands)

@@ -171,22 +171,62 @@ geet
 
 ---
 
-### One-line summary
-
-> geet lets you reuse and evolve templates **inside real projects**, using Git itself — without refactoring, copying files, or changing layouts.
-
-
----
-
-### Technical limitations
-
-##### 1. It is difficult to make the main app ignore files from the template repo. (template repo must be a subset of the app)
-It is difficult to ignore files in your app repo but commit them to the template repo. This is because git ALWAYS looks at .gitignore files and gives them a higher priority than the `core.excludesFile` variable we use (See docs [here](https://git-scm.com/docs/gitignore))
-Solutions:
- 1. just commit the whole template to your app. this is the simplest solution, and the one we are leaning into for now to reduce complexity.
- 2. Technically we could modify our `.geet-git.sh` file to move the parent's gitignore out of the way as we do the commit and then back into place after, but we promised you no hacks like that and plan to avoid this unless it becomes necessary.
- 3. You can add template files using `-f` arg, but that also ignores the `.geetexclude` so could be dangerous. 
-
+### Help
+```bash
+geet help
+#geet — Git-based template layering system (see https://github.com/modularizer/geet)
+#
+#TEMPLATE MANAGEMENT:
+#  template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
+#  init                                                   Initialize a freshly-cloned template repo as your app
+#  install <repo> <dir> [--public|--private|--internal]  Clone a template repo and initialize it
+#
+#FILE MANAGEMENT:
+#  tree [list|tracked|all]                                Show what files the template includes
+#  split <dest> [mode]                                    Export template files to external folder
+#  inspect <path>                                         Show which layer tracks a file and its git status
+#  sync                                                   Compile .geetinclude whitelist into .geetexclude
+#  include <path>                                         Manage included files
+#
+#DETACHMENT (CONFLICT RESOLUTION):
+#  detach <path>                                          Detach a file to always use "keep-ours" on merge conflicts
+#  detached                                               List hard-detached files
+#  retach <path>                                          Undo a detach command
+#
+#OPERATIONS:
+#  session <subcommand>                                   Run commands in isolated template snapshot
+#  publish|pub [opts]                                     Publish template to GitHub
+#  gh <subcommand>                                        GitHub CLI integration (pr, issue, etc.)
+#  doctor                                                 Run health checks on your geet setup
+#  prework                                                See what we know
+#  precommit|pc                                           Run pre-commit hook
+#
+#UTILITIES:
+#  version|--version|-v                                   Show geet version
+#  why                                                    Reasons to use geet
+#  whynot                                                 Reasons not to use geet
+#  read                                                   Actually read sourcecode
+#  open                                                   Calls `open https://github.com/modularizer/geet` to open repo in browser
+#  bug|feature|issue|whoops|suggest                       Open an issue on GitHub
+#  remove|rm                                              Remove template tracking (requires confirmation)
+#  destroy                                                Remove template tracking (no confirmation)
+#
+#GIT ACCESS:
+#  git <command> [...]                                    Direct git access to template repo
+#  <git-command> [...]                                    Any git command (auto-forwarded to template repo)
+#  e.g. `geet pull`, `geet push`, etc.
+#
+#OPTIONS: (available on most commands)
+#  --verbose
+#  --quiet
+#  --filter "MATCH"
+#  --filter "~UNMATCH"
+#
+#Current layer: rnb
+#
+#NOTE:
+#  I (Torin/modularizer) would love feedback. Message me! mailto:modularizer@gmail.com
+```
 ---
 
 ### Just two git repos?
