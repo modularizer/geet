@@ -1,3 +1,37 @@
+quick_status(){
+  if [[ -n "$TEMPLATE_NAME" ]]; then
+    local template_files_count=$(geet ls-files 2>/dev/null | wc -l)
+    local template_modified=$(geet status --short 2>/dev/null | grep -c '^ M' || echo 0)
+    local app_modified=$(git status --short 2>/dev/null | grep -c '^ M' || echo 0)
+    local app_branch=$(git branch --show-current 2>/dev/null || echo "unknown")
+
+cat <<EOF
+=== QUICK CONTEXT ===
+App Repo: $APP_NAME (branch: $app_branch)
+Template Repo: $TEMPLATE_NAME
+Working Directory: $APP_DIR
+Template tracking: $template_files_count files
+Uncommitted changes: $template_modified template files, $app_modified app files
+=====================
+EOF
+  fi
+}
+
+machine_metadata(){
+  if [[ -n "$TEMPLATE_NAME" ]]; then
+    local template_files=$(geet ls-files 2>/dev/null | wc -l)
+cat <<EOF
+# GEET_METADATA_V1
+app_repo: $APP_NAME
+template_repo: $TEMPLATE_NAME
+working_dir: $APP_DIR
+template_files_count: $template_files
+has_template: true
+# END_METADATA
+EOF
+  fi
+}
+
 explain(){
   if [[ -n "$TEMPLATE_NAME" ]]; then
 cat <<EOF
@@ -64,7 +98,7 @@ The "admin" files for controlling the template repo ( $TEMPLATE_NAME ) from insi
 * .$TEMPLATE_NAME/semitracked-template-config.env defines some case-insensitive patterns used by our precommit hooks to avoid commiting app-specific code to the template repo
   * these patterns are also used when we call \`geet include\` so we see the error as early as possible
 
-* .$TEMPLATE_NAME/.geetinclude shows the files that wee included in the template
+* .$TEMPLATE_NAME/.geetinclude shows the files that are included in the template
   * you should not need to manually edit .$TEMPLATE_NAME/.geetinclude as that is handled by  \`geet include\`
 EOF
 fi
@@ -92,27 +126,96 @@ cat <<EOF
 EOF
 }
 
+critical_warnings(){
+  if [[ -n "$TEMPLATE_NAME" ]]; then
+cat <<EOF
+=== CRITICAL: WHAT NOT TO DO ===
+❌ DON'T use \`git add\` to add NEW files to template - use \`geet include\` instead
+❌ DON'T manually edit .$TEMPLATE_NAME/.geetexclude (auto-generated from .geetinclude)
+❌ DON'T commit app-specific code to template (pre-commit hooks will block)
+
+NOTE: Template files are often tracked by BOTH repos
+  • Use \`git commit\` to commit changes to the app repo
+  • Use \`geet commit\` to commit changes to the template repo
+  • Same file can be in both - they're independent repos sharing a working directory
+
+✅ DO use \`geet inspect <file>\` when unsure which repo tracks a file
+✅ DO use \`geet tree\` to see what's in the template
+================================
+EOF
+  else
+cat <<EOF
+=== CRITICAL: WHAT NOT TO DO ===
+❌ DON'T use \`git add\` to add NEW files to template - use \`geet include\` instead
+❌ DON'T manually edit .template/.geetexclude (auto-generated from .geetinclude)
+❌ DON'T commit app-specific code to template (pre-commit hooks will block)
+
+NOTE: Template files are often tracked by BOTH repos
+  • Use \`git commit\` to commit changes to the app repo
+  • Use \`geet commit\` to commit changes to the template repo
+  • Same file can be in both - they're independent repos sharing a working directory
+
+✅ DO use \`geet inspect <file>\` when unsure which repo tracks a file
+✅ DO use \`geet tree\` to see what's in the template
+================================
+EOF
+  fi
+}
+
 learn(){
-  echo "Welcome to \`geet\` - a git wrapper CLI that allows you two track two git repos in a single working directory"
+  # 1. Quick context first (most important for AI agents)
+  quick_status
+  echo ""
+
+  # 2. Machine-readable metadata
+  machine_metadata
+  echo ""
+
+  # 3. Welcome and core explanation
+  echo "Welcome to \`geet\` - a git wrapper CLI that allows you to track two git repos in a single working directory"
   echo "\`geet\` is used to allow sharing a subset of your primary app repo as a template/quickstart repo that you can use to spin off new versions of your project"
+  echo ""
   echo "Let's talk specifics. The following explanation comes from the output of \`geet explain\`"
   echo "------------------------------------- geet explain -------------------------------------------------------------"
   explain
   echo "----------------------------------------------------------------------------------------------------------------"
+  echo ""
+
+  # 4. Common workflows (most actionable information)
   common_workflows
-  echo "----------------------------------------------------------------------------------------------------------------"
+  echo ""
+
+  # 5. Critical warnings (prevent common mistakes)
+  critical_warnings
+  echo ""
+
+  # 6. Commands available
   echo "Now, for all the commands you have available let's see \`geet help\`"
   echo "------------------------------------- geet help ----------------------------------------------------------------"
   geet help
   echo "----------------------------------------------------------------------------------------------------------------"
+  echo ""
+
+  # 7. Admin files explanation
+  explain_hidden
+  echo "----------------------------------------------------------------------------------------------------------------"
+  echo ""
+
+  # 8. Full README for comprehensive documentation
   echo "Let's REALLY hammer home the purpose of the project"
   echo "------------------------------------- geet readme --------------------------------------------------------------"
   geet readme
   echo "----------------------------------------------------------------------------------------------------------------"
-  explain_hidden
-  echo "----------------------------------------------------------------------------------------------------------------"
+  echo ""
+
+  # 9. Final tips and next steps
   echo "My final tip if you are still confused is to use \`geet read\` to explore the \`geet\` source code"
-  echo "----------------------------------------------------------------------------------------------------------------"
-  echo "NEXT: to see the current state of the files, please run \`geet inspect .\`"
-  echo "THEN: ask the user "
+  echo ""
+  echo "================================================================================================================"
+  echo "RECOMMENDED NEXT STEPS FOR AI AGENTS:"
+  echo "  1. Run: \`geet inspect .\`     → See which files are tracked by which repo"
+  echo "  2. Run: \`geet status\`        → See uncommitted template changes"
+  echo "  3. Run: \`geet tree\`          → See all template files in tree format"
+  echo "  4. If confused, run: \`geet read\` to explore the source code"
+  echo "================================================================================================================"
 }
