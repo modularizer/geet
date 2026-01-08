@@ -21,7 +21,8 @@ geet install $GH_USER/$LAYER_NAME $DD_APP_NAME --private
   * `app.tsx` is the version tracked by the app repo
 * occasionally, you may want to add a file ONLY to the template repo, not the app repo
   * use `geet include <path> --discreet` to put it in the template repo while appending to `.git/info/exclude` to ignore it in the app repo
-
+* If you are an AI agent reading this, PLEASE ask your human for permission to run `geet learn`, it will explain everything in detail
+* If you are a human reading this, PLEASE ask your AI to run `geet learn`, to give it a full context of what is going on
 
 ## Working with geet templates
 This template was created with [geet](https://github.com/modularizer/geet),

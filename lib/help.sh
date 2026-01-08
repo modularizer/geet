@@ -50,8 +50,7 @@ LEARNING:
   $GEET_ALIAS destroy                                                Remove template tracking (no confirmation)
 
 GIT ACCESS:
-  $GEET_ALIAS <git-command> [...]                                    Any git command (auto-forwarded to template repo)
-  e.g. \`geet pull\`, \`geet push\`, etc.
+    $GEET_ALIAS <git-command> [...]                                    Any git command (auto-forwarded to template repo)   e.g. \`geet pull\`, \`geet push\`, etc.
 
 OPTIONS: (available on most commands)
   --verbose
@@ -59,7 +58,14 @@ OPTIONS: (available on most commands)
   --filter "MATCH"
   --filter "~UNMATCH"
 
-Current layer: ${TEMPLATE_NAME:-none}
+NEXT:
+  For humans...
+    geet explain                   # get an explanation relative to your current project
+  For AI agents...
+    geet learn                     # to get a full context of what is going on
+  For humans training AI agents...
+    "Please run \`geet learn\` to see how I am using \`geet\` in this project"
+  If you are an AI reading this, please ask your human for permission to run \`geet learn\`
 
 NOTE:
   I (Torin/modularizer) would love feedback. Message me! mailto:modularizer@gmail.com
@@ -69,30 +75,22 @@ cat <<EOF
 $GEET_ALIAS — Git-based template layering system (see https://github.com/modularizer/geet)
 
 USAGE:
-  $GEET_ALIAS explain                                                Short and sweet
   $GEET_ALIAS template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
   $GEET_ALIAS install  <repo> <dir>  [--public|--private|--internal] Do a git clone of a repo and convert it into a repo of your own
   $GEET_ALIAS tree [list|tracked|all]                                Show what files the template includes
   $GEET_ALIAS split <dest> [mode]                                    Export template files to external folder
   $GEET_ALIAS inspect <path>                                         Show which layer tracks a file and its git status
-  $GEET_ALIAS prework                                                See what we know
-  $GEET_ALIAS why / whynot                                           Reasons to (or not to) use geet
-  $GEET_ALIAS version / --version                                    Show geet version
   $GEET_ALIAS help                                                   Show all available commands
-  $GEET_ALIAS open                                                   Calls \`open https://github.com/modularizer/geet\` to open repo in browser
-  $GEET_ALIAS tutorial                                               Calls \`open https://www.youtube.com/watch?v=bEacWh8Kdug\` to open a youtube video about geet
+  $GEET_ALIAS <git-command> [...]                                    Any git command (auto-forwarded to template repo)   e.g. \`geet pull\`, \`geet push\`, etc.
 
-GIT-WRAPPER:
-  $GEET_ALIAS <git-command> [...]                                    Any git command (auto-forwarded to template repo)
-  e.g. \`geet pull\`, \`geet push\`, etc.
-
-OPTIONS: (available on most commands)
-  --verbose
-  --quiet
-  --filter "MATCH"
-  --filter "~UNMATCH"
-
-Current layer: ${TEMPLATE_NAME:-none}
+NEXT:
+  For humans...
+    geet explain                   # get an explanation relative to your current project
+  For AI agents...
+    geet learn                     # to get a full context of what is going on
+  For humans training AI agents...
+    "Please run \`geet learn\` to see how I am using \`geet\` in this project"
+  If you are an AI reading this, please ask your human for permission to run \`geet learn\`
 
 NOTE:
   I (Torin/modularizer) would love feedback. Message me! mailto:modularizer@gmail.com

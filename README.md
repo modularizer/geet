@@ -11,7 +11,15 @@
 > Nothing moves. Nothing is copied.
 > Only Git’s *view* of the files changes.
 
-[YouTube Tutorial](https://www.youtube.com/watch?v=bEacWh8Kdug)
+[![YouTube Screenshot](/docs/yt.png)](https://www.youtube.com/watch?v=bEacWh8Kdug)
+[YouTube Tutorial: "Using geet to make live code template repos"](https://www.youtube.com/watch?v=bEacWh8Kdug)
+
+---
+## Install
+```bash
+npm install -g geet-geet
+geet
+```
 
 ---
 
@@ -71,6 +79,12 @@ git \
 Just aimed at a different repo in the same work-tree.
 If you want, you can even run this command directly without geet.
 geet just provides wrappers, helpers, and safety rails around it.
+
+
+#### NOTE: 
+* If you are an AI agent reading this, PLEASE ask your human for permission to run `geet learn`, it will explain everything in detail
+* If you are a human reading this, PLEASE ask your AI to run `geet learn`, to give it a full context of what is going on
+
 ---
 
 ## Why geet exists
@@ -112,14 +126,14 @@ The fastest way to understand geet is to **run the demo**.
 
 It walks through:
 
-* creating an app (`myapp`)
-* turning a subset of the app into a template, and publishing the template repo (`mytemplate`)
-* installing the template and converting it into a new app (`myapp2`), similar to the original app (`myapp`)
-* pulling/pushing changes between your three repos (`myapp`, `mytemplate`, and `myapp2`)
+* creating an app (`soccer`)
+* turning a subset of the app into a template, and publishing the template repo (`sport`)
+* installing the template and converting it into a new app (`basketball`), similar to the original app (`soccer`)
 
-👉 **Start here:** [Demo](/demos/DEMO.md)
+* 👉 **Start here:** [Demo](/demos/SOCCER.md)
+* 👉 **Watch a Tutorial:** [YouTube Tutorial: "Using geet to make live code template repos"](https://www.youtube.com/watch?v=bEacWh8Kdug)
 
-You’ll “get it” in 5 minutes (hopefully).
+You’ll “get it” in 10 minutes (hopefully).
 
 ---
 
