@@ -15,6 +15,9 @@ This template was created with [geet](https://github.com/modularizer/geet),
 a CLI git wrapper which acts as an alternative to git submodules,
 allowing publishing a template which controls files which are interleaved in the same working directory as your project.
 
+### `geet` location
+Assuming `geet` was successfully installed using `npm install -g geet-geet`, you should be able to find the source code by using `geet valueof GEET_LIB`
+
 ### Benefits of `geet`
 - Pull template updates when you want, receiving fixes straight into your project
 - Modify the template source code in your working directory! If you diverge, conflicts will be resolved cleanly without messing up your files

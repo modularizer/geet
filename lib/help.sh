@@ -40,6 +40,8 @@ UTILITIES:
   version|--version|-v                                   Show geet version
   why                                                    Reasons to use geet
   whynot                                                 Reasons not to use geet
+  read                                                   Actually read sourcecode
+  open                                                   Calls \`open https://github.com/modularizer/geet\` to open repo in browser
   bug|feature|issue|whoops|suggest                       Open an issue on GitHub
   remove|rm                                              Remove template tracking (requires confirmation)
   destroy                                                Remove template tracking (no confirmation)
@@ -47,8 +49,18 @@ UTILITIES:
 GIT ACCESS:
   git <command> [...]                                    Direct git access to template repo
   <git-command> [...]                                    Any git command (auto-forwarded to template repo)
+  e.g. \`geet pull\`, \`geet push\`, etc.
+
+OPTIONS: (available on most commands)
+  --verbose
+  --quiet
+  --filter "MATCH"
+  --filter "~UNMATCH"
 
 Current layer: ${TEMPLATE_NAME:-none}
+
+NOTE:
+  I (Torin/modularizer) would love feedback. Message me! mailto:modularizer@gmail.com
 EOF
 else
 cat <<EOF
@@ -63,10 +75,23 @@ USAGE:
   prework                                                See what we know
   why / whynot                                           Reasons to (or not to) use geet
   version / --version                                    Show geet version
-  help --all                                             Show all available commands
+  help                                                   Show all available commands
+  open                                                   Calls \`open https://github.com/modularizer/geet\` to open repo in browser
+
+GIT-WRAPPER:
   <git-command> [...]                                    Any git command (auto-forwarded to template repo)
+  e.g. \`geet pull\`, \`geet push\`, etc.
+
+OPTIONS: (available on most commands)
+  --verbose
+  --quiet
+  --filter "MATCH"
+  --filter "~UNMATCH"
 
 Current layer: ${TEMPLATE_NAME:-none}
+
+NOTE:
+  I (Torin/modularizer) would love feedback. Message me! mailto:modularizer@gmail.com
 EOF
 fi
 

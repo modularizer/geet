@@ -121,7 +121,7 @@ inspect_directory() {
         git -C "$APP_DIR" ls-files 2>/dev/null | grep "^${dir}" || true
       fi
       # Files from working tree (excluding .git and dot-git directories)
-      find "$APP_DIR/$dir" -type d \( -name .git -o -name dot-git \) -prune -o -type f -print 2>/dev/null | sed "s|^$APP_DIR/||; s|^\./||" || true
+      find "$APP_DIR/$dir" -type d \( -name .git -o -name dot-git  -o node_modules -o site-packages -o .expo -o .idea\) -prune -o -type f -print 2>/dev/null | sed "s|^$APP_DIR/||; s|^\./||" || true
     } | sort -u
   )
 
@@ -132,6 +132,10 @@ inspect_directory() {
     # Get status for both repos
     local template_status=$(get_file_status "$rel_path" "template")
     local app_status=$(get_file_status "$rel_path" "app")
+
+    # Skip files that are excluded by template AND ignored by app
+    [[ "$template_status" == "excluded" && "$app_status" == "ignored" ]] && continue
+    [[ "$template_status" == "untracked" && "$app_status" == "ignored" ]] && continue
 
     # Color code the status
     local template_colored=""
@@ -156,8 +160,7 @@ inspect_directory() {
       *) app_colored="$app_status" ;;
     esac
 
-    # Skip files that are excluded by template AND ignored by app
-    [[ "$template_status" == "excluded" && "$app_status" == "ignored" ]] && continue
+
 
     printf "%-60s %-24s %-24s\n" "$rel_path" "$template_colored" "$app_colored"
   done <<< "$all_files"

@@ -7,15 +7,24 @@ GEET_LIB="$(cd -- "$NODE_BIN/../lib/node_modules/geet-geet/lib" && pwd)"
 GEET_ARGS=("$@")
 source "$GEET_LIB/digest-and-locate.sh" "$@"
 debug "GEET_ARGS=${GEET_ARGS[@]}"
-cmd="${1:-help}"
+cmd="${1:-overview}"
 
 
 shift || true
 
 case "$cmd" in
-  help|-h|--help)
+  overview)
     source "$GEET_LIB/help.sh"
     help "${GEET_ARGS[@]:1}"
+    ;;
+
+  open)
+    open "https://github.com/modularizer/geet"
+    ;;
+
+  help|-h|--help)
+    source "$GEET_LIB/help.sh"
+    help "${GEET_ARGS[@]:1}" --all
     ;;
 
   version|-v|--version)
@@ -72,6 +81,27 @@ case "$cmd" in
   prework|valueof)
     source "$GEET_LIB/prework.sh"
     prework "${GEET_ARGS[@]:1}"
+    ;;
+
+  read)
+    source "$GEET_LIB/resolve-path.sh"
+    file="${GEET_ARGS[1]:-help}"
+    GEET_ARGS=("${GEET_ARGS[@]:1}")
+    srccat "$file"
+    ;;
+
+  doc|docs)
+    source "$GEET_LIB/resolve-path.sh"
+    name="${GEET_ARGS[1]%.md}"
+    name="${name^^}.md"
+    GEET_ARGS=("${GEET_ARGS[@]:1}")
+    srcresolve "/docs/$name"
+    ;;
+
+  readme|readme.md|README|README.md)
+    source "$GEET_LIB/resolve-path.sh"
+    GEET_ARGS=("${GEET_ARGS[@]:1}")
+    srccat "README.md"
     ;;
 
   gh)
