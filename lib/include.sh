@@ -94,23 +94,36 @@ EOF
   for arg in "${GEET_ARGS[@]}"; do
     matches=()
 
-    # If user passed a directory (no glob chars), recurse it
-    if [[ "$arg" != *[\*\?\[]* && -d "$arg" ]]; then
-      while IFS= read -r -d '' m; do
-        matches+=("$m")
-      done < <(find "$arg" -type f -print0)
-
-    # If user passed a glob, use find -path (supports * matching across /)
-    elif [[ "$arg" == *[\*\?\[]* ]]; then
-      # anchor search at repo root so globs work regardless of cwd
-      while IFS= read -r -d '' m; do
-        matches+=("$m")
-      done < <(find "$root" -path "$root/$arg" -type f -print0)
-
-    # Otherwise treat as a literal file
+    if [[ "$arg" == "-u" ]]; then
+      include_file="$TEMPLATE_DIR/.geetinclude"
+      # read each line, split on # and take the part before the line, trim, discard if empty, otherwise add to matches
+      while IFS= read -r line; do
+        line="${line%%#*}"          # strip comments
+        line="$(echo "$line" | xargs)"  # trim whitespace
+        if [[ -n "$line" && -e "$line" ]]; then
+          matches+=("$line")
+          debug "match $line"
+        fi
+      done < "$include_file"
     else
-      [[ -f "$arg" ]] || die "no files matched: $arg"
-      matches+=("$arg")
+      # If user passed a directory (no glob chars), recurse it
+      if [[ "$arg" != *[\*\?\[]* && -d "$arg" ]]; then
+        while IFS= read -r -d '' m; do
+          matches+=("$m")
+        done < <(find "$arg" -type f -print0)
+
+      # If user passed a glob, use find -path (supports * matching across /)
+      elif [[ "$arg" == *[\*\?\[]* ]]; then
+        # anchor search at repo root so globs work regardless of cwd
+        while IFS= read -r -d '' m; do
+          matches+=("$m")
+        done < <(find "$root" -path "$root/$arg" -type f -print0)
+
+      # Otherwise treat as a literal file
+      else
+        [[ -f "$arg" ]] || die "no files matched: $arg"
+        matches+=("$arg")
+      fi
     fi
 
     (( ${#matches[@]} > 0 )) || die "no files matched: $arg"
@@ -130,14 +143,48 @@ EOF
       errors=()
 
       for path in "${matches[@]}"; do
-        path_rel="$(rel_path "$path")"
+        raw_path="$path"                 # keep what compgen returned
+        path_rel="$(rel_path "$raw_path")"
+        [[ "$path_rel" == .git/* ]] && die "attempted to commit .git"
+        [[ "$path_rel" == .git/* ]] && die "attempted to commit dot-git"
+        path_abs="$(abs_path "$raw_path")"
+
+        path_base=$(basename -- "$path_rel")
+        path_dir=$(dirname -- "$path_rel")
+        ext=""
+        stem="$path_base"
+        if [[ "$path_base" == *.* ]]; then
+          ext=".${path_base##*.}"
+          stem="${path_base%.*}"
+        fi
+
+        if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX."* ]]; then
+          src_base="$path_base"
+        else
+          if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX_2."* ]]; then
+            src_base="$path_base"
+          else
+            if [[ -e "$path_dir/${stem}${TEMPLATE_FILE_SUFFIX}${ext}" ]]; then
+              src_base="${stem}${TEMPLATE_FILE_SUFFIX}.${ext}"
+            else
+              if [[ -e "$path_dir/${stem}${TEMPLATE_FILE_SUFFIX_2}${ext}" ]]; then
+                src_base="${stem}${TEMPLATE_FILE_SUFFIX_2}${ext}"
+              else
+                src_base="${stem}"
+              fi
+            fi
+          fi
+        fi
+
+        src_rel="$path_dir/$src_base"
+
 
         # Check file patterns (pipe-delimited)
         if [[ -n "$file_patterns" ]]; then
           IFS='|' read -ra patterns <<< "$file_patterns"
           for pattern in "${patterns[@]}"; do
             [[ -z "$pattern" ]] && continue
-            if echo "$path_rel" | grep -qiE "$pattern"; then
+            if echo "$src_rel" | grep -qiE "$pattern"; then
               errors+=("FILE: $path_rel matches pattern: $pattern")
             fi
           done
@@ -150,10 +197,10 @@ EOF
             [[ -z "$pattern" ]] && continue
 
             # Skip if file doesn't exist
-            [[ -f "$path" ]] || continue
+            [[ -f "$src_base" ]] || continue
 
             # Skip binary files
-            if file --mime "$path" 2>/dev/null | grep -q 'charset=binary'; then
+            if file --mime "$src_base" 2>/dev/null | grep -q 'charset=binary'; then
               continue
             fi
 
@@ -161,7 +208,7 @@ EOF
             [[ "$path_rel" == *template-config.env ]] && continue
 
             # Search for pattern in file content
-            matches_content=$(grep -niE "$pattern" "$path" 2>/dev/null || true)
+            matches_content=$(grep -niE "$pattern" "$src_base" 2>/dev/null || true)
             if [[ -n "$matches_content" ]]; then
               while IFS= read -r match; do
                 errors+=("CONTENT: $path_rel matches pattern: $pattern"$'\n'"  → $match")
