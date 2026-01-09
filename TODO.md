@@ -65,3 +65,9 @@ I get it, but I want to make sure everyone understands why they should just use 
 basically just call `sed`
 
 ### H. Add instructions for Intellij "External Tools" setup
+
+### K. Add `geet bind`
+"bind" a normal app repo to an unrelated template repo that is similar but has no true connection.
+
+e.g. maybe someone has an app they previously cloned from a template repo, not using geet, and now the template has been update and they want to use `geet` to manage the relationship.
+
