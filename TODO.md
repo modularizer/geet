@@ -46,7 +46,17 @@ Maybe when we diverge a file we could record either a git diff, a patch, or a se
 * or in the reverse scenario, the app repo updates index.tsx, how can we apply those changes to index.template.tsx, without losing the "soccer" -> "sport" change?
 * can we somehow record that index.template.tsx = index.tsx + diff(index.tsx, index.template.tsx)??
 
-Look into patch files, maybe we can use them to record the diff?
+Implementation:
+1. use optional `geet patch <file>` 
+   * diffs the template vs the app version of a file and writes differences to a patch file
+   * the template file is then made read-only locally (BUT if/when we commit it to git it MUST be writable again)
+   * the patch file is never tracked by the template repo, but MAY be tracked by the app repo (at the discretion of app repo owner)
+   * a two-way filewatcher is setup to sync changes index.tsx <=> index.template.tsx using the patch file
+2. use optional `geet unpatch <file>`
+   * deletes the patch file and makes the template file writable again
+   * no filewatcher needed
+
+
 
 ### F. Auto-import checker
 When we include a new file, automatically check its imports and references to see if we are missing another file it depends on that we must include as well.
