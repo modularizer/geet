@@ -37,6 +37,9 @@ EOF
 
   [[ -f "$TEMPLATE_DIR/.geetinclude" ]] || return 0
 
+  # Load mapping parser
+  source "$GEET_LIB/mapping.sh"
+
   # Markers for the auto-populated section
   local START_MARKER="# GEETINCLUDESTART"
   local END_MARKER="# GEETINCLUDEEND"
@@ -44,19 +47,19 @@ EOF
   # Generate compiled rules
   local compiled_rules=""
   # WHITELIST MODE: Process .geetinclude
+  # Only write REMOTE paths to .geetexclude (what's tracked in the template repo)
+  local local_path remote_path
   while IFS= read -r line || [[ -n "$line" ]]; do
-    line="${line#"${line%%[![:space:]]*}"}"
-    line="${line%"${line##*[![:space:]]}"}"
-
-    [[ -z "$line" ]] && continue
-    [[ "$line" == \#* ]] && continue
-
-    if [[ "$line" == "!!"* ]]; then
-      compiled_rules+="!${line#!!}"$'\n'
-    elif [[ "$line" == "!"* ]]; then
-      compiled_rules+="${line#!}"$'\n'
-    else
-      compiled_rules+="!$line"$'\n'
+    # Parse the mapping
+    if parse_mapping_line "$line" local_path remote_path; then
+      # Use remote_path (what the repo tracks) for .geetexclude
+      if [[ "$remote_path" == "!!"* ]]; then
+        compiled_rules+="!${remote_path#!!}"$'\n'
+      elif [[ "$remote_path" == "!"* ]]; then
+        compiled_rules+="${remote_path#!}"$'\n'
+      else
+        compiled_rules+="!$remote_path"$'\n'
+      fi
     fi
   done < "$TEMPLATE_DIR/.geetinclude"
 

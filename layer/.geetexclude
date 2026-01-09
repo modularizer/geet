@@ -27,6 +27,7 @@
 !.$LAYER_NAME/.geethier
 !.$LAYER_NAME/.geetinclude
 !.$LAYER_NAME/.geetexclude
+!.$LAYER_NAME/.git-ref.env
 !.$LAYER_NAME/template-config.env
 !.$LAYER_NAME/parent.gitignore
 !.$LAYER_NAME/geet-git.sh

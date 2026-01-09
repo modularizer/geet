@@ -225,10 +225,12 @@ include() {
       - if you add a file like \`server${TEMPLATE_FILE_SUFFIX}.tsx\` it goes into git as \`server.tsx\`
 
     Usage: $GEET_ALIAS include <glob>
+           $GEET_ALIAS include --migrate   # convert old .geetinclude to new mapping format
 
     Examples:
       $GEET_ALIAS include src/    # adds the whole src folder and all its contents
       $GEET_ALIAS include package.json    # adds just that file
+      $GEET_ALIAS include --migrate        # migrate .geetinclude to explicit local => remote format
 EOF
     return 0
   fi
@@ -247,9 +249,90 @@ EOF
   has_flag --discreet DISCREET
   has_flag --discrete DISCRETE
   has_flag -f FORCE
+  has_flag --migrate MIGRATE
   if [[ -n "$DISCRETE" ]]; then
     die "Whoops! did you mean --discreet?"
   fi
+
+  # Handle --migrate flag
+  if [[ -n "$MIGRATE" ]]; then
+    local include_file="$TEMPLATE_DIR/.geetinclude"
+    if [[ ! -f "$include_file" ]]; then
+      die ".geetinclude file not found at $include_file"
+    fi
+
+    log "Migrating .geetinclude to explicit mapping format..."
+
+    # Read and convert
+    local temp_file=$(mktemp)
+    if [[ ! -f "$temp_file" ]]; then
+      die "Failed to create temporary file"
+    fi
+
+    local migrated_count=0
+    local unchanged_count=0
+
+    # Temporarily disable exit-on-error for migration
+    set +e
+
+    while IFS= read -r line || [[ -n "$line" ]]; do
+      # Trim whitespace
+      line="${line#"${line%%[![:space:]]*}"}"
+      line="${line%"${line##*[![:space:]]}"}"
+
+      # Preserve comments and empty lines as-is
+      if [[ -z "$line" ]] || [[ "$line" == \#* ]]; then
+        echo "$line" >> "$temp_file"
+        continue
+      fi
+
+      # Check if already has mapping
+      if [[ "$line" == *" => "* ]]; then
+        echo "$line" >> "$temp_file"
+        ((unchanged_count++))
+        continue
+      fi
+
+      # Old format: line contains REMOTE path (dst)
+      # We need to find if LOCAL path (with suffix) exists
+      local remote_path="$line"
+      local src_rel="" src_abs="" dst_rel=""
+
+      # Use resolve_paths to find the local variant
+      resolve_paths "$remote_path" src_rel src_abs dst_rel 2>/dev/null || {
+        # If resolve_paths fails, keep the line as-is
+        warn "Failed to resolve path: $remote_path, keeping as-is"
+        echo "$remote_path" >> "$temp_file"
+        ((unchanged_count++))
+        continue
+      }
+
+      if [[ "$src_rel" == "$dst_rel" ]]; then
+        # No mapping needed, keep simple format
+        echo "$remote_path" >> "$temp_file"
+        debug "unchanged: $remote_path"
+        ((unchanged_count++))
+      else
+        # Write explicit mapping
+        echo "$src_rel => $dst_rel" >> "$temp_file"
+        log "  $remote_path -> $src_rel => $dst_rel"
+        ((migrated_count++))
+      fi
+    done < "$include_file"
+
+    # Re-enable exit-on-error
+    set -e
+
+    # Replace original file
+    mv "$temp_file" "$include_file" || die "Failed to update .geetinclude"
+
+    log "Migration complete!"
+    log "  Migrated entries: $migrated_count"
+    log "  Unchanged entries: $unchanged_count"
+
+    return 0
+  fi
+
   sync_exclude
   # first, modify .geetinclude
   for arg in "${GEET_ARGS[@]}"; do
@@ -289,9 +372,22 @@ EOF
       path_rel="$(rel_path "$path")"
       resolve_paths "$path_rel" src_rel src_abs dst_rel
 
-      if ! grep -qxF "$dst_rel" "$TEMPLATE_DIR/.geetinclude"; then
-        debug "adding $dst_rel to $TEMPLATE_DIR/.geetinclude"
-        printf '%s\n' "$dst_rel" >> "$TEMPLATE_DIR/.geetinclude"
+      # Write mapping to .geetinclude
+      # Format: local => remote (or just path if they're the same)
+      local mapping_line
+      if [[ "$src_rel" == "$dst_rel" ]]; then
+        mapping_line="$dst_rel"
+      else
+        mapping_line="$src_rel => $dst_rel"
+      fi
+
+      # Check if this mapping already exists (check both formats)
+      if ! grep -qxF "$mapping_line" "$TEMPLATE_DIR/.geetinclude" && \
+         ! grep -qxF "$dst_rel" "$TEMPLATE_DIR/.geetinclude" && \
+         ! grep -qF "$src_rel => $dst_rel" "$TEMPLATE_DIR/.geetinclude" && \
+         ! grep -qF "$dst_rel => " "$TEMPLATE_DIR/.geetinclude"; then
+        debug "adding mapping to .geetinclude: $mapping_line"
+        printf '%s\n' "$mapping_line" >> "$TEMPLATE_DIR/.geetinclude"
       fi
     done
     sync_exclude
@@ -308,16 +404,17 @@ EOF
       if [[ "$src_rel" == "$dst_rel" ]]; then
         debug "calling git add"
         if [[ -n "$DISCREET" ]]; then
+          # --discreet mode: hide LOCAL path from parent repo
           if [[ -n "$APP_GIT_INFO_EXCLUDE" ]]; then
-            if ! grep -qxF "$dst_rel" "$APP_GIT_INFO_EXCLUDE"; then
-              debug "appending $dst_rel to $APP_GIT_INFO_EXCLUDE"
-              echo "$dst_rel" >> "$APP_GIT_INFO_EXCLUDE"
+            if ! grep -qxF "$src_rel" "$APP_GIT_INFO_EXCLUDE"; then
+              debug "appending $src_rel to $APP_GIT_INFO_EXCLUDE"
+              echo "$src_rel" >> "$APP_GIT_INFO_EXCLUDE"
             else
-              debug "$dst_rel already in $APP_GIT_INFO_EXCLUDE"
+              debug "$src_rel already in $APP_GIT_INFO_EXCLUDE"
             fi
           fi
           touch "$TEMPLATE_DIR/parent-git-info-exclude"
-          echo "$dst_rel" >> "$TEMPLATE_DIR/parent-git-info-exclude"
+          echo "$src_rel" >> "$TEMPLATE_DIR/parent-git-info-exclude"
         fi
         if [[ -n "$FORCE" ]]; then
           geet_git add -f -- "$dst_rel"

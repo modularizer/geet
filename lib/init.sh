@@ -88,6 +88,11 @@ if [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]]; then
   log "already initialized"
   log "layer gitdir: $DOTGIT"
   log "app gitdir:   $APP_GIT"
+
+  # Update git ref tracking even when already initialized
+  source "$GEET_LIB/git-ref.sh"
+  update_git_ref
+
   return 0
 fi
 
@@ -165,6 +170,12 @@ fi
 
 git add .
 git commit -m "initial commit"
+###############################################################################
+# UPDATE GIT REF TRACKING
+###############################################################################
+source "$GEET_LIB/git-ref.sh"
+update_git_ref
+
 ###############################################################################
 # FINAL OUTPUT
 ###############################################################################
