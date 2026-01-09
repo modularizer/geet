@@ -18,7 +18,12 @@ Usage:
   $GEET_ALIAS session [options] -- <command...>
 
 Options:
-  --mode tracked|all      split mode (default: tracked)
+  --mode MODE             split mode (default: staged)
+                            live     - symlink worktree files (enables hot-reload)
+                            tracked  - copy tracked files using .geetinclude mapping
+                            staged   - copy files from git staged area
+                            HEAD     - copy files from git HEAD
+                            <ref>    - copy files from specified git ref
   --tmp <dir>             use a specific temp dir (default: mktemp)
   --keep                  do not delete temp dir after command
   --copy-back A:B         copy tmp/A back to repo/B after command
@@ -31,7 +36,9 @@ Use cases:
 
 Examples:
   $GEET_ALIAS session -- npm run build
-  $GEET_ALIAS session --mode all -- npm test
+  $GEET_ALIAS session --mode live -- npm run dev
+  $GEET_ALIAS session --mode tracked -- npm test
+  $GEET_ALIAS session --mode HEAD -- npm run build
   $GEET_ALIAS session --copy-back dist:dist -- npm run build
   $GEET_ALIAS session --keep -- npm run build
 EOF
@@ -43,7 +50,7 @@ if [[ "$sub" == "help" || "$sub" == "-h" || "$sub" == "--help" ]]; then
   return 0
 fi
 
-mode="tracked"
+mode="staged"
 tmp=""
 keep=0
 declare -a copy_back=()
@@ -80,7 +87,7 @@ trap cleanup EXIT
 log "splitting ($mode) to: $tmp"
 # Call split function from split.sh
 source "$GEET_LIB/split.sh"
-split "$tmp" "$mode" "--splitdst-exists-ok"
+split "$tmp" "$mode" "--overwrite"
 
 log "running in temp dir: $*"
 (

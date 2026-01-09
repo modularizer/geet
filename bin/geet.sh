@@ -77,9 +77,22 @@ case "$cmd" in
     split "${GEET_ARGS[@]:1}"
     ;;
 
+  livesplit)
+    source "$GEET_LIB/split.sh"
+    # Extract destination from args, add 'live' mode
+    dest_arg="${GEET_ARGS[1]:-}"
+    split "$dest_arg" live "${GEET_ARGS[@]:2}"
+    ;;
+
   session)
     source "$GEET_LIB/session.sh"
     session "${GEET_ARGS[@]:1}"
+    ;;
+
+  livesession)
+    source "$GEET_LIB/session.sh"
+    # Add --mode live to the arguments
+    session --mode live "${GEET_ARGS[@]:1}"
     ;;
 
   template)

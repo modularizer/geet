@@ -204,6 +204,60 @@ check_content_patterns() {
   done
 }
 
+# Sync new files to tracked live folders
+# Usage: sync_to_live_folders src_rel dst_rel
+sync_to_live_folders() {
+  local src_rel="$1"
+  local dst_rel="$2"
+  local live_folders_file="$TEMPLATE_DIR/live-folders"
+
+  [[ -f "$live_folders_file" ]] || return 0
+
+  source "$GEET_LIB/mapping.sh"
+
+  # Clean up dead folders and build list of active ones
+  local temp_file=$(mktemp)
+  local -a active_folders=()
+
+  while IFS= read -r live_folder; do
+    [[ -n "$live_folder" ]] || continue
+
+    if [[ -d "$live_folder" ]]; then
+      active_folders+=("$live_folder")
+      echo "$live_folder" >> "$temp_file"
+    else
+      debug "removing dead live folder: $live_folder"
+    fi
+  done < "$live_folders_file"
+
+  # Update live-folders file with only active folders
+  mv "$temp_file" "$live_folders_file"
+
+  # If no active folders, we're done
+  (( ${#active_folders[@]} > 0 )) || return 0
+
+  # For each active live folder, symlink the new file if it doesn't exist
+  for live_folder in "${active_folders[@]}"; do
+    local src_abs="$root/$src_rel"
+    local dest_file="$live_folder/$dst_rel"
+    local dest_dir="$(dirname "$dest_file")"
+
+    # Skip if file already exists in live folder
+    [[ -e "$dest_file" ]] && continue
+
+    # Create directory if needed
+    mkdir -p "$dest_dir"
+
+    # Create symlink
+    ln "$src_abs" "$dest_file"
+    debug "synced to live folder: $dest_file -> $src_abs"
+  done
+
+  if (( ${#active_folders[@]} > 0 )); then
+    log "synced new file to ${#active_folders[@]} live folder(s)"
+  fi
+}
+
 
 
 
@@ -421,10 +475,14 @@ EOF
         else
           geet_git add -- "$dst_rel"
         fi
+        # Sync to live folders
+        sync_to_live_folders "$src_rel" "$dst_rel"
       else
         debug "adding $src_rel as $dst_rel"
         hash=$(geet_git hash-object -w -- "$src_abs")
         geet_git update-index --add --cacheinfo 100644 "$hash" "$dst_rel"
+        # Sync to live folders
+        sync_to_live_folders "$src_rel" "$dst_rel"
       fi
     done
   done
