@@ -43,6 +43,167 @@ abs_path() {
   echo "$root/$p"
 }
 
+# Resolve src and dst paths for a file
+# Returns: src_rel (actual file), src_abs (absolute path), dst_rel (clean name for git)
+# Invariants: dst = dir/stem+ext, src = first existing: dir/stem+suffix+ext
+resolve_paths() {
+  local path_rel="$1"
+  local -n _src_rel="$2"
+  local -n _src_abs="$3"
+  local -n _dst_rel="$4"
+
+  # Parse path components
+  local path_base=$(basename -- "$path_rel")
+  local path_dir=$(dirname -- "$path_rel")
+
+  # Extract extension
+  local ext=""
+  if [[ "$path_base" == *.* ]]; then
+    ext=".${path_base##*.}"
+  fi
+
+  # Extract stem and suffix
+  local name_without_ext="${path_base%.*}"
+  local stem suffix
+  if [[ "$name_without_ext" == *"$TEMPLATE_FILE_SUFFIX" ]]; then
+    stem="${name_without_ext%"$TEMPLATE_FILE_SUFFIX"}"
+    suffix="$TEMPLATE_FILE_SUFFIX"
+  elif [[ "$name_without_ext" == *"$TEMPLATE_FILE_SUFFIX_2" ]]; then
+    stem="${name_without_ext%"$TEMPLATE_FILE_SUFFIX_2"}"
+    suffix="$TEMPLATE_FILE_SUFFIX_2"
+  else
+    stem="$name_without_ext"
+    suffix=""
+  fi
+
+  # dst is always clean name
+  _dst_rel="$path_dir/${stem}${ext}"
+
+  # Check for conflict: both template variants exist
+  local template1="$path_dir/${stem}${TEMPLATE_FILE_SUFFIX}${ext}"
+  local template2="$path_dir/${stem}${TEMPLATE_FILE_SUFFIX_2}${ext}"
+  if [[ -e "$template1" && -e "$template2" ]]; then
+    die "conflicting templates exist: $template1 and $template2"
+  fi
+
+  # src is first existing file in priority order
+  local src_base
+  if [[ -n "$suffix" ]]; then
+    src_base="${stem}${suffix}${ext}"
+  elif [[ -e "$template1" ]]; then
+    src_base="${stem}${TEMPLATE_FILE_SUFFIX}${ext}"
+  elif [[ -e "$template2" ]]; then
+    src_base="${stem}${TEMPLATE_FILE_SUFFIX_2}${ext}"
+  else
+    src_base="${stem}${ext}"
+  fi
+
+  _src_rel="$path_dir/$src_base"
+  _src_abs="$(abs_path "$_src_rel")"
+}
+
+# Merge pattern variables with fallback
+merge_patterns() {
+  local pattern1="${1:-}"
+  local pattern2="${2:-}"
+  local default="${3:-}"
+
+  local merged="${pattern1}|${pattern2}"
+  merged="${merged#|}"
+  merged="${merged%|}"
+  echo "${default:-"$merged"}"
+}
+
+# Find files matching an argument (glob, directory, file, or -u flag)
+find_matches() {
+  local arg="$1"
+  local root="$2"
+  local -n _matches="$3"
+
+  _matches=()
+
+  if [[ "$arg" == "-u" ]]; then
+    # Read from .geetinclude file
+    local include_file="$TEMPLATE_DIR/.geetinclude"
+    while IFS= read -r line; do
+      line="${line%%#*}"          # strip comments
+      line="$(echo "$line" | xargs)"  # trim whitespace
+      if [[ -n "$line" && -e "$line" ]]; then
+        _matches+=("$line")
+        debug "match $line"
+      fi
+    done < "$include_file"
+  elif [[ "$arg" != *[\*\?\[]* && -d "$arg" ]]; then
+    # Directory: recurse all files
+    while IFS= read -r -d '' m; do
+      _matches+=("$m")
+    done < <(find "$arg" -type f -print0)
+  elif [[ "$arg" == *[\*\?\[]* ]]; then
+    # Glob pattern: use find -path (supports * matching across /)
+    while IFS= read -r -d '' m; do
+      _matches+=("$m")
+    done < <(find "$root" -path "$root/$arg" -type f -print0)
+  else
+    # Literal file
+    [[ -f "$arg" ]] || die "no files matched: $arg"
+    _matches+=("$arg")
+  fi
+
+  (( ${#_matches[@]} > 0 )) || die "no files matched: $arg"
+}
+
+# Check if file path matches any of the given patterns
+check_file_patterns() {
+  local file_patterns="$1"
+  local src_rel="$2"
+  local path_rel="$3"
+  local -n _errors="$4"
+
+  [[ -n "$file_patterns" ]] || return 0
+
+  IFS='|' read -ra patterns <<< "$file_patterns"
+  for pattern in "${patterns[@]}"; do
+    [[ -z "$pattern" ]] && continue
+    if echo "$src_rel" | grep -qiE "$pattern"; then
+      _errors+=("FILE: $path_rel matches pattern: $pattern")
+    fi
+  done
+}
+
+# Check if file content matches any of the given patterns
+check_content_patterns() {
+  local content_patterns="$1"
+  local src_rel="$2"
+  local path_rel="$3"
+  local -n _errors="$4"
+
+  [[ -n "$content_patterns" ]] || return 0
+
+  IFS='|' read -ra patterns <<< "$content_patterns"
+  for pattern in "${patterns[@]}"; do
+    [[ -z "$pattern" ]] && continue
+
+    # Skip if file doesn't exist
+    [[ -f "$src_rel" ]] || continue
+
+    # Skip binary files
+    if file --mime "$src_rel" 2>/dev/null | grep -q 'charset=binary'; then
+      continue
+    fi
+
+    # Skip template config
+    [[ "$path_rel" == *template-config.env ]] && continue
+
+    # Search for pattern in file content
+    matches_content=$(grep -niE "$pattern" "$src_rel" 2>/dev/null || true)
+    if [[ -n "$matches_content" ]]; then
+      while IFS= read -r match; do
+        _errors+=("CONTENT: $path_rel matches pattern: $pattern"$'\n'"  → $match")
+      done <<< "$matches_content"
+    fi
+  done
+}
+
 
 
 
@@ -92,130 +253,22 @@ EOF
   sync_exclude
   # first, modify .geetinclude
   for arg in "${GEET_ARGS[@]}"; do
-    matches=()
-
-    if [[ "$arg" == "-u" ]]; then
-      include_file="$TEMPLATE_DIR/.geetinclude"
-      # read each line, split on # and take the part before the line, trim, discard if empty, otherwise add to matches
-      while IFS= read -r line; do
-        line="${line%%#*}"          # strip comments
-        line="$(echo "$line" | xargs)"  # trim whitespace
-        if [[ -n "$line" && -e "$line" ]]; then
-          matches+=("$line")
-          debug "match $line"
-        fi
-      done < "$include_file"
-    else
-      # If user passed a directory (no glob chars), recurse it
-      if [[ "$arg" != *[\*\?\[]* && -d "$arg" ]]; then
-        while IFS= read -r -d '' m; do
-          matches+=("$m")
-        done < <(find "$arg" -type f -print0)
-
-      # If user passed a glob, use find -path (supports * matching across /)
-      elif [[ "$arg" == *[\*\?\[]* ]]; then
-        # anchor search at repo root so globs work regardless of cwd
-        while IFS= read -r -d '' m; do
-          matches+=("$m")
-        done < <(find "$root" -path "$root/$arg" -type f -print0)
-
-      # Otherwise treat as a literal file
-      else
-        [[ -f "$arg" ]] || die "no files matched: $arg"
-        matches+=("$arg")
-      fi
-    fi
-
-    (( ${#matches[@]} > 0 )) || die "no files matched: $arg"
+    find_matches "$arg" "$root" matches
 
     # Check patterns before adding files
-    file_patterns="${PREVENT_COMMIT_FILE_PATTERNS_1:-}|${PREVENT_COMMIT_FILE_PATTERNS_2:-}"
-    file_patterns="${file_patterns#|}"
-    file_patterns="${file_patterns%|}"
-    file_patterns="${PREVENT_COMMIT_FILE_PATTERNS:-"$file_patterns"}"
-
-    content_patterns="${PREVENT_COMMIT_CONTENT_PATTERNS_1:-}|${PREVENT_COMMIT_CONTENT_PATTERNS_2:-}"
-    content_patterns="${content_patterns#|}"
-    content_patterns="${content_patterns%|}"
-    content_patterns="${PREVENT_COMMIT_CONTENT_PATTERNS:-"$content_patterns"}"
+    file_patterns=$(merge_patterns "${PREVENT_COMMIT_FILE_PATTERNS_1:-}" "${PREVENT_COMMIT_FILE_PATTERNS_2:-}" "${PREVENT_COMMIT_FILE_PATTERNS:-}")
+    content_patterns=$(merge_patterns "${PREVENT_COMMIT_CONTENT_PATTERNS_1:-}" "${PREVENT_COMMIT_CONTENT_PATTERNS_2:-}" "${PREVENT_COMMIT_CONTENT_PATTERNS:-}")
 
     if [[ -n "$file_patterns" ]] || [[ -n "$content_patterns" ]]; then
       errors=()
 
       for path in "${matches[@]}"; do
-        raw_path="$path"                 # keep what compgen returned
-        path_rel="$(rel_path "$raw_path")"
+        path_rel="$(rel_path "$path")"
         [[ "$path_rel" == .git/* ]] && die "attempted to commit .git"
-        [[ "$path_rel" == .git/* ]] && die "attempted to commit dot-git"
-        path_abs="$(abs_path "$raw_path")"
 
-        path_base=$(basename -- "$path_rel")
-        path_dir=$(dirname -- "$path_rel")
-        ext=""
-        stem="$path_base"
-        if [[ "$path_base" == *.* ]]; then
-          ext=".${path_base##*.}"
-          stem="${path_base%.*}"
-        fi
-
-        if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX."* ]]; then
-          src_base="$path_base"
-        else
-          if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX_2."* ]]; then
-            src_base="$path_base"
-          else
-            if [[ -e "$path_dir/${stem}${TEMPLATE_FILE_SUFFIX}${ext}" ]]; then
-              src_base="${stem}${TEMPLATE_FILE_SUFFIX}.${ext}"
-            else
-              if [[ -e "$path_dir/${stem}${TEMPLATE_FILE_SUFFIX_2}${ext}" ]]; then
-                src_base="${stem}${TEMPLATE_FILE_SUFFIX_2}${ext}"
-              else
-                src_base="${stem}"
-              fi
-            fi
-          fi
-        fi
-
-        src_rel="$path_dir/$src_base"
-
-
-        # Check file patterns (pipe-delimited)
-        if [[ -n "$file_patterns" ]]; then
-          IFS='|' read -ra patterns <<< "$file_patterns"
-          for pattern in "${patterns[@]}"; do
-            [[ -z "$pattern" ]] && continue
-            if echo "$src_rel" | grep -qiE "$pattern"; then
-              errors+=("FILE: $path_rel matches pattern: $pattern")
-            fi
-          done
-        fi
-
-        # Check content patterns (pipe-delimited)
-        if [[ -n "$content_patterns" ]]; then
-          IFS='|' read -ra patterns <<< "$content_patterns"
-          for pattern in "${patterns[@]}"; do
-            [[ -z "$pattern" ]] && continue
-
-            # Skip if file doesn't exist
-            [[ -f "$src_base" ]] || continue
-
-            # Skip binary files
-            if file --mime "$src_base" 2>/dev/null | grep -q 'charset=binary'; then
-              continue
-            fi
-
-            # Skip template config
-            [[ "$path_rel" == *template-config.env ]] && continue
-
-            # Search for pattern in file content
-            matches_content=$(grep -niE "$pattern" "$src_base" 2>/dev/null || true)
-            if [[ -n "$matches_content" ]]; then
-              while IFS= read -r match; do
-                errors+=("CONTENT: $path_rel matches pattern: $pattern"$'\n'"  → $match")
-              done <<< "$matches_content"
-            fi
-          done
-        fi
+        resolve_paths "$path_rel" src_rel src_abs dst_rel
+        check_file_patterns "$file_patterns" "$src_rel" "$path_rel" errors
+        check_content_patterns "$content_patterns" "$src_rel" "$path_rel" errors
       done
 
       # If errors found, fail the include
@@ -232,138 +285,50 @@ EOF
         exit 1
       fi
     fi
-    sync_exclude
     for path in "${matches[@]}"; do
-      raw_path="$path"                 # keep what compgen returned
-      path_rel="$(rel_path "$raw_path")"
-      [[ "$path_rel" == .git/* ]] && die "attempted to commit .git"
-      [[ "$path_rel" == .git/* ]] && die "attempted to commit dot-git"
-      path_abs="$(abs_path "$raw_path")"
+      path_rel="$(rel_path "$path")"
+      resolve_paths "$path_rel" src_rel src_abs dst_rel
 
-      path_base=$(basename -- "$path_rel")
-      path_dir=$(dirname -- "$path_rel")
-      ext=""
-      stem="$path_base"
-      if [[ "$path_base" == *.* ]]; then
-        ext=".${path_base##*.}"
-        stem="${path_base%.*}"
-      fi
-
-      if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX."* ]]; then
-        sample_base="$path_base"
-        # path already is the sample, so find the filename to add as
-        add_base="${path_base/$TEMPLATE_FILE_SUFFIX./.}"
-      else
-        if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX_2."* ]]; then
-          sample_base="$path_base"
-          # path already is the sample, so find the filename to add as
-          add_base="${path_base/$TEMPLATE_FILE_SUFFIX_2./.}"
-        else
-          # if the path's filename doesnt contain our suffix, then figure out the version of the filename which does have the suffix
-          add_base="$path_base"
-
-          sample_base="${stem}${TEMPLATE_FILE_SUFFIX}.${ext}"
-        fi
-      fi
-
-      sample_path_rel="$path_dir/$sample_base"
-      sample_path_abs="$(abs_path "$sample_path_rel")"
-
-      if [[ "$path_rel" != "$sample_path_rel" && -f "$sample_path_abs" ]]; then
-        path_rel="$sample_path_rel"
-        path_abs="$sample_path_abs"
-      fi
-
-      add_path_rel="$(rel_path "$path_dir/$add_base")"
-
-      debug "checking for $add_path_rel in $TEMPLATE_DIR/.geetinclude"
-      if ! grep -qxF "$add_path_rel" "$TEMPLATE_DIR/.geetinclude"; then
-
-        debug "adding $add_path_rel to $TEMPLATE_DIR/.geetinclude"
-
-        # add to our include file
-        printf '%s\n' "$add_path_rel" >> "$TEMPLATE_DIR/.geetinclude"
+      if ! grep -qxF "$dst_rel" "$TEMPLATE_DIR/.geetinclude"; then
+        debug "adding $dst_rel to $TEMPLATE_DIR/.geetinclude"
+        printf '%s\n' "$dst_rel" >> "$TEMPLATE_DIR/.geetinclude"
       fi
     done
-
     sync_exclude
+
+
     geet_git add -- "$TEMPLATE_DIR/.geetinclude" "$TEMPLATE_DIR/.geetexclude"
     for path in "${matches[@]}"; do
-          raw_path="$path"                 # keep what compgen returned
-          path_rel="$(rel_path "$raw_path")"
-          og_path_rel="$(rel_path "$raw_path")"
-          [[ "$path_rel" == .git/* ]] && die "attempted to commit .git"
-          [[ "$path_rel" == .git/* ]] && die "attempted to commit dot-git"
-          path_abs="$(abs_path "$raw_path")"
+      path_rel="$(rel_path "$path")"
+      resolve_paths "$path_rel" src_rel src_abs dst_rel
 
-          path_base=$(basename -- "$path_rel")
-          path_dir=$(dirname -- "$path_rel")
-          ext=""
-          stem="$path_base"
-          debug "ext:$ext"
-          debug "stem:$stem"
-          if [[ "$path_base" == *.* ]]; then
-            ext=".${path_base##*.}"
-            stem="${path_base%.*}"
-            debug "ext:$ext"
-            debug "stem:$stem"
-          fi
+      debug "src_rel:$src_rel"
+      debug "dst_rel:$dst_rel"
 
-          if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX."* ]]; then
-            sample_base="$path_base"
-            # path already is the sample, so find the filename to add as
-            add_base="${path_base/$TEMPLATE_FILE_SUFFIX./.}"
-          else
-            if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX_2."* ]]; then
-              sample_base="$path_base"
-              # path already is the sample, so find the filename to add as
-              add_base="${path_base/$TEMPLATE_FILE_SUFFIX_2./.}"
+      if [[ "$src_rel" == "$dst_rel" ]]; then
+        debug "calling git add"
+        if [[ -n "$DISCREET" ]]; then
+          if [[ -n "$APP_GIT_INFO_EXCLUDE" ]]; then
+            if ! grep -qxF "$dst_rel" "$APP_GIT_INFO_EXCLUDE"; then
+              debug "appending $dst_rel to $APP_GIT_INFO_EXCLUDE"
+              echo "$dst_rel" >> "$APP_GIT_INFO_EXCLUDE"
             else
-              # if the path's filename doesnt contain our suffix, then figure out the version of the filename which does have the suffix
-              add_base="$path_base"
-
-              sample_base="${stem}${TEMPLATE_FILE_SUFFIX}.${ext}"
+              debug "$dst_rel already in $APP_GIT_INFO_EXCLUDE"
             fi
           fi
-
-          sample_path_rel="$path_dir/$sample_base"
-          sample_path_abs="$(abs_path "$sample_path_rel")"
-          debug "sample_path_rel:$sample_path_rel"
-          debug "path_rel:$path_rel"
-
-          if [[ "$path_rel" != "$sample_path_rel" && -f "$sample_path_abs" ]]; then
-            debug "setting path_rel:$sample_path_rel"
-            path_rel="$sample_path_rel"
-            path_abs="$sample_path_abs"
-          fi
-
-          add_path_rel="$(rel_path "$path_dir/$add_base")"
-
-          if [[ "$add_path_rel" == "$path_rel" ]]; then
-            debug "calling git add"
-            if [[ -n "$DISCREET" ]]; then
-              if [[ -n "$APP_GIT_INFO_EXCLUDE" ]]; then
-                if ! grep -qxF "$add_path_rel" "$APP_GIT_INFO_EXCLUDE"; then
-                  debug "appending $add_path_rel to $APP_GIT_INFO_EXCLUDE"
-                  echo "$add_path_rel" >> "$APP_GIT_INFO_EXCLUDE"
-                else
-                  debug "$add_path_rel already in $APP_GIT_INFO_EXCLUDE"
-                fi
-              fi
-              touch "$TEMPLATE_DIR/parent-git-info-exclude"
-              echo "$add_path_rel" >> "$TEMPLATE_DIR/parent-git-info-exclude"
-            fi
-            if [[ -n "$FORCE" ]]; then
-              geet_git add -f -- "$add_path_rel"
-            else
-              geet_git add -- "$add_path_rel"
-            fi
-          else
-            debug "adding $sample_path_rel as $add_path_rel"
-            debug "using $path_abs"
-            hash=$(geet_git hash-object -w -- "$path_abs")
-            geet_git update-index --add --cacheinfo 100644 "$hash" "$add_path_rel"
-          fi
-        done
+          touch "$TEMPLATE_DIR/parent-git-info-exclude"
+          echo "$dst_rel" >> "$TEMPLATE_DIR/parent-git-info-exclude"
+        fi
+        if [[ -n "$FORCE" ]]; then
+          geet_git add -f -- "$dst_rel"
+        else
+          geet_git add -- "$dst_rel"
+        fi
+      else
+        debug "adding $src_rel as $dst_rel"
+        hash=$(geet_git hash-object -w -- "$src_abs")
+        geet_git update-index --add --cacheinfo 100644 "$hash" "$dst_rel"
+      fi
+    done
   done
 }
