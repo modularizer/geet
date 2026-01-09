@@ -20,6 +20,11 @@ resolve_mapping_from_path() {
   local path_base=$(basename -- "$path_rel")
   local path_dir=$(dirname -- "$path_rel")
 
+  # Normalize path_dir: convert "." to empty string to avoid ./ prefix
+  if [[ "$path_dir" == "." ]]; then
+    path_dir=""
+  fi
+
   # Extract extension
   local ext=""
   if [[ "$path_base" == *.* ]]; then
@@ -41,11 +46,15 @@ resolve_mapping_from_path() {
   fi
 
   # remote is always clean name (what's tracked in repo)
-  _remote_result="$path_dir/${stem}${ext}"
+  if [[ -n "$path_dir" ]]; then
+    _remote_result="$path_dir/${stem}${ext}"
+  else
+    _remote_result="${stem}${ext}"
+  fi
 
   # local is first existing file in priority order
-  local template1="$path_dir/${stem}${TEMPLATE_FILE_SUFFIX:-".template"}${ext}"
-  local template2="$path_dir/${stem}${TEMPLATE_FILE_SUFFIX_2:-"-template"}${ext}"
+  local template1="${path_dir:+$path_dir/}${stem}${TEMPLATE_FILE_SUFFIX:-".template"}${ext}"
+  local template2="${path_dir:+$path_dir/}${stem}${TEMPLATE_FILE_SUFFIX_2:-"-template"}${ext}"
 
   local src_base
   if [[ -n "$suffix" ]]; then
@@ -60,7 +69,11 @@ resolve_mapping_from_path() {
     src_base="${stem}${ext}"
   fi
 
-  _local_result="$path_dir/$src_base"
+  if [[ -n "$path_dir" ]]; then
+    _local_result="$path_dir/$src_base"
+  else
+    _local_result="$src_base"
+  fi
 }
 
 # Parse a single line from .geetinclude into local and remote parts
@@ -92,7 +105,7 @@ parse_mapping_line() {
   else
     # Old format - auto-resolve using TEMPLATE_FILE_SUFFIX logic
     resolve_mapping_from_path "$line" _local _remote
-    debug "auto-resolved mapping: $line -> $_local => $_remote"
+#    debug "auto-resolved mapping: $line -> $_local => $_remote"
   fi
 
   return 0

@@ -51,9 +51,6 @@ Look into patch files, maybe we can use them to record the diff?
 ### F. Auto-import checker
 When we include a new file, automatically check its imports and references to see if we are missing another file it depends on that we must include as well.
 
-### G. Optimize `geet include -u`
-Only run the pattern checker on modified files, not all files. Filter down matches array to only modified files.
-
 ### H. Add `geet spawn`
 Similar to `geet install`, but run from inside the source template repo or even the source app repo.
 
@@ -71,3 +68,4 @@ basically just call `sed`
 
 e.g. maybe someone has an app they previously cloned from a template repo, not using geet, and now the template has been update and they want to use `geet` to manage the relationship.
 
+### L. Assess windows support

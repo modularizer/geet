@@ -1,3 +1,87 @@
+# Strip ./ prefix from a path
+strip_dot_slash() {
+  local path="$1"
+  # Remove ./ prefix, handling multiple occurrences
+  while [[ "$path" == "./"* ]]; do
+    path="${path#./}"
+  done
+  echo "$path"
+}
+
+# Alphabetize .geetinclude file and fix ./ prefixes
+alphabetize_include() {
+  local include_file="$TEMPLATE_DIR/.geetinclude"
+  [[ -f "$include_file" ]] || return 0
+
+  local temp_file=$(mktemp)
+  local temp_sorted=$(mktemp)
+  local temp_cleaned=$(mktemp)
+
+  # Separate header comments from entries
+  local in_header=1
+  local header=""
+  local entries=""
+
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    # Check if line is empty or a comment
+    local trimmed="${line#"${line%%[![:space:]]*}"}"
+    if [[ -z "$trimmed" ]] || [[ "$trimmed" == \#* ]]; then
+      if [[ $in_header -eq 1 ]]; then
+        header+="$line"$'\n'
+      else
+        # Comment after entries - treat as entry to preserve context
+        entries+="$line"$'\n'
+      fi
+    else
+      in_header=0
+      # Fix ./ prefixes in the line
+      if [[ "$line" == *" => "* ]]; then
+        # Mapping format: local => remote
+        local local_part="${line%% => *}"
+        local remote_part="${line##* => }"
+
+        # Strip leading/trailing whitespace and ./ prefix
+        local_part="${local_part#"${local_part%%[![:space:]]*}"}"
+        local_part="${local_part%"${local_part##*[![:space:]]}"}"
+        local_part="$(strip_dot_slash "$local_part")"
+
+        remote_part="${remote_part#"${remote_part%%[![:space:]]*}"}"
+        remote_part="${remote_part%"${remote_part##*[![:space:]]}"}"
+        remote_part="$(strip_dot_slash "$remote_part")"
+
+        # Reconstruct the mapping
+        if [[ "$local_part" == "$remote_part" ]]; then
+          # If they're the same after cleanup, use simple format
+          entries+="$local_part"$'\n'
+        else
+          entries+="$local_part => $remote_part"$'\n'
+        fi
+      else
+        # Simple path format
+        local clean_line="$(strip_dot_slash "$trimmed")"
+        entries+="$clean_line"$'\n'
+      fi
+    fi
+  done < "$include_file"
+
+  # Sort entries (stable sort, case-insensitive)
+  if [[ -n "$entries" ]]; then
+    printf "%s" "$entries" | sort -f > "$temp_sorted"
+  else
+    : > "$temp_sorted"
+  fi
+
+  # Write back: header + sorted entries
+  {
+    [[ -n "$header" ]] && printf "%s" "$header"
+    cat "$temp_sorted"
+  } > "$temp_file"
+
+  # Replace original file
+  mv "$temp_file" "$include_file"
+  rm -f "$temp_sorted" "$temp_cleaned"
+}
+
 sync() {
   debug "running sync"
   # Show help if requested
@@ -9,13 +93,15 @@ This command processes your .geetinclude file (whitelist) and compiles it
 into .geetexclude (gitignore-style format) between special markers.
 
 What it does:
-  1. Reads each line from .geetinclude
-  2. Converts whitelist patterns to gitignore format:
+  1. Fixes ./ prefixes in all paths (e.g., ./app.json → app.json)
+  2. Alphabetizes .geetinclude entries (preserving header comments)
+  3. Reads each line from .geetinclude
+  4. Converts whitelist patterns to gitignore format:
      - 'foo' → '!foo' (include this)
      - '!foo' → 'foo' (exclude this - removes the !)
      - '!!foo' → '!foo' (literal ! prefix)
-  3. Inserts compiled rules between GEETINCLUDESTART and GEETINCLUDEEND markers
-  4. Preserves manual rules before/after the markers
+  5. Inserts compiled rules between GEETINCLUDESTART and GEETINCLUDEEND markers
+  6. Preserves manual rules before/after the markers
 
 Usage:
   $GEET_ALIAS sync
@@ -36,6 +122,9 @@ EOF
   fi
 
   [[ -f "$TEMPLATE_DIR/.geetinclude" ]] || return 0
+
+  # Alphabetize .geetinclude before processing
+  alphabetize_include
 
   # Load mapping parser
   source "$GEET_LIB/mapping.sh"

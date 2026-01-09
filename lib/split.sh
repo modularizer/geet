@@ -174,6 +174,7 @@ if [[ "$export_mode" == "live" ]]; then
     dest_dir="$(dirname "$dest_file")"
 
     [[ -e "$src_file" ]] || continue
+    log "linking $src_file to $dest_file"
 
     mkdir -p "$dest_dir"
     ln "$src_file" "$dest_file"

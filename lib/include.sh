@@ -56,6 +56,11 @@ resolve_paths() {
   local path_base=$(basename -- "$path_rel")
   local path_dir=$(dirname -- "$path_rel")
 
+  # Normalize path_dir: convert "." to empty string to avoid ./ prefix
+  if [[ "$path_dir" == "." ]]; then
+    path_dir=""
+  fi
+
   # Extract extension
   local ext=""
   if [[ "$path_base" == *.* ]]; then
@@ -77,11 +82,15 @@ resolve_paths() {
   fi
 
   # dst is always clean name
-  _dst_rel="$path_dir/${stem}${ext}"
+  if [[ -n "$path_dir" ]]; then
+    _dst_rel="$path_dir/${stem}${ext}"
+  else
+    _dst_rel="${stem}${ext}"
+  fi
 
   # Check for conflict: both template variants exist
-  local template1="$path_dir/${stem}${TEMPLATE_FILE_SUFFIX}${ext}"
-  local template2="$path_dir/${stem}${TEMPLATE_FILE_SUFFIX_2}${ext}"
+  local template1="${path_dir:+$path_dir/}${stem}${TEMPLATE_FILE_SUFFIX}${ext}"
+  local template2="${path_dir:+$path_dir/}${stem}${TEMPLATE_FILE_SUFFIX_2}${ext}"
   if [[ -e "$template1" && -e "$template2" ]]; then
     die "conflicting templates exist: $template1 and $template2"
   fi
@@ -98,7 +107,11 @@ resolve_paths() {
     src_base="${stem}${ext}"
   fi
 
-  _src_rel="$path_dir/$src_base"
+  if [[ -n "$path_dir" ]]; then
+    _src_rel="$path_dir/$src_base"
+  else
+    _src_rel="$src_base"
+  fi
   _src_abs="$(abs_path "$_src_rel")"
 }
 
@@ -112,6 +125,34 @@ merge_patterns() {
   merged="${merged#|}"
   merged="${merged%|}"
   echo "${default:-"$merged"}"
+}
+
+# Get list of modified files (relative to root)
+get_modified_files() {
+  local -n _modified="$1"
+  _modified=()
+
+  # Get modified, added, or untracked files from working tree
+  # This includes: modified, added, deleted, renamed, untracked
+  local status_output
+  status_output=$(git --git-dir="$DOTGIT" --work-tree="$APP_DIR" status --porcelain 2>/dev/null || true)
+
+  if [[ -n "$status_output" ]]; then
+    while IFS= read -r line; do
+      # Parse git status --porcelain format: XY filename
+      # X = index status, Y = working tree status
+      # We care about working tree modifications (Y column)
+      local file="${line:3}" # Skip "XY " prefix
+
+      # Handle renames (format: "R  old -> new")
+      if [[ "$file" == *" -> "* ]]; then
+        file="${file##* -> }"
+      fi
+
+      # Only add if file exists
+      [[ -n "$file" && -e "$file" ]] && _modified+=("$file")
+    done <<< "$status_output"
+  fi
 }
 
 # Find files matching an argument (glob, directory, file, or -u flag)
@@ -130,7 +171,7 @@ find_matches() {
       line="$(echo "$line" | xargs)"  # trim whitespace
       if [[ -n "$line" && -e "$line" ]]; then
         _matches+=("$line")
-        debug "match $line"
+#        debug "match $line"
       fi
     done < "$include_file"
   elif [[ "$arg" != *[\*\?\[]* && -d "$arg" ]]; then
@@ -250,12 +291,9 @@ sync_to_live_folders() {
 
     # Create symlink
     ln "$src_abs" "$dest_file"
-    debug "synced to live folder: $dest_file -> $src_abs"
+    debug "synced to live folder: $src_abs -> $dest_file"
   done
 
-  if (( ${#active_folders[@]} > 0 )); then
-    log "synced new file to ${#active_folders[@]} live folder(s)"
-  fi
 }
 
 
@@ -278,13 +316,12 @@ include() {
       - we never allow commiting a file like \`index.tsx\` if \`index${TEMPLATE_FILE_SUFFIX}.tsx\` exists, we will instead add \`index${TEMPLATE_FILE_SUFFIX}.tsx\` as \`index.tsx\`
       - if you add a file like \`server${TEMPLATE_FILE_SUFFIX}.tsx\` it goes into git as \`server.tsx\`
 
-    Usage: $GEET_ALIAS include <glob>
-           $GEET_ALIAS include --migrate   # convert old .geetinclude to new mapping format
 
     Examples:
-      $GEET_ALIAS include src/    # adds the whole src folder and all its contents
+      $GEET_ALIAS include src/            # adds the whole src folder and all its contents
       $GEET_ALIAS include package.json    # adds just that file
-      $GEET_ALIAS include --migrate        # migrate .geetinclude to explicit local => remote format
+      $GEET_ALIAS include -u              # adds all files the template repo is already tracking
+      $GEET_ALIAS include --migrate       # migrate .geetinclude to explicit local => remote format
 EOF
     return 0
   fi
@@ -392,6 +429,66 @@ EOF
   for arg in "${GEET_ARGS[@]}"; do
     find_matches "$arg" "$root" matches
 
+    # Cache for resolve_paths results to avoid repeated expensive calls
+    declare -A path_cache_src_rel
+    declare -A path_cache_src_abs
+    declare -A path_cache_dst_rel
+
+    # Cached version of resolve_paths
+    cached_resolve_paths() {
+      local path_rel="$1"
+      local -n _out_src_rel="$2"
+      local -n _out_src_abs="$3"
+      local -n _out_dst_rel="$4"
+
+      # Check cache first
+      if [[ -n "${path_cache_src_rel[$path_rel]:-}" ]]; then
+        _out_src_rel="${path_cache_src_rel[$path_rel]}"
+        _out_src_abs="${path_cache_src_abs[$path_rel]}"
+        _out_dst_rel="${path_cache_dst_rel[$path_rel]}"
+        debug "cache hit for: $path_rel"
+        return 0
+      fi
+
+      # Cache miss - call resolve_paths with temp vars and store results
+      local tmp_src_rel tmp_src_abs tmp_dst_rel
+      resolve_paths "$path_rel" tmp_src_rel tmp_src_abs tmp_dst_rel
+      path_cache_src_rel["$path_rel"]="$tmp_src_rel"
+      path_cache_src_abs["$path_rel"]="$tmp_src_abs"
+      path_cache_dst_rel["$path_rel"]="$tmp_dst_rel"
+      _out_src_rel="$tmp_src_rel"
+      _out_src_abs="$tmp_src_abs"
+      _out_dst_rel="$tmp_dst_rel"
+      debug "cache miss for: $path_rel"
+    }
+
+    # Optimize: for -u flag, only check patterns on modified files
+    local -a check_matches=()
+    if [[ "$arg" == "-u" ]]; then
+      # Get list of modified files
+      local -a modified_files
+      get_modified_files modified_files
+
+      # Build associative array for fast lookup
+      declare -A modified_map
+      for mf in "${modified_files[@]}"; do
+        modified_map["$mf"]=1
+      done
+
+      # Filter matches to only modified files for pattern checking
+      for path in "${matches[@]}"; do
+        local path_rel_check="$(rel_path "$path")"
+        if [[ -n "${modified_map[$path_rel_check]:-}" ]]; then
+          check_matches+=("$path")
+        fi
+      done
+
+      debug "include -u: checking patterns on ${#check_matches[@]} modified files (out of ${#matches[@]} total)"
+    else
+      # For non -u args, check all matches
+      check_matches=("${matches[@]}")
+    fi
+
     # Check patterns before adding files
     file_patterns=$(merge_patterns "${PREVENT_COMMIT_FILE_PATTERNS_1:-}" "${PREVENT_COMMIT_FILE_PATTERNS_2:-}" "${PREVENT_COMMIT_FILE_PATTERNS:-}")
     content_patterns=$(merge_patterns "${PREVENT_COMMIT_CONTENT_PATTERNS_1:-}" "${PREVENT_COMMIT_CONTENT_PATTERNS_2:-}" "${PREVENT_COMMIT_CONTENT_PATTERNS:-}")
@@ -399,11 +496,11 @@ EOF
     if [[ -n "$file_patterns" ]] || [[ -n "$content_patterns" ]]; then
       errors=()
 
-      for path in "${matches[@]}"; do
+      for path in "${check_matches[@]}"; do
         path_rel="$(rel_path "$path")"
         [[ "$path_rel" == .git/* ]] && die "attempted to commit .git"
 
-        resolve_paths "$path_rel" src_rel src_abs dst_rel
+        cached_resolve_paths "$path_rel" src_rel src_abs dst_rel
         check_file_patterns "$file_patterns" "$src_rel" "$path_rel" errors
         check_content_patterns "$content_patterns" "$src_rel" "$path_rel" errors
       done
@@ -422,35 +519,58 @@ EOF
         exit 1
       fi
     fi
-    for path in "${matches[@]}"; do
-      path_rel="$(rel_path "$path")"
-      resolve_paths "$path_rel" src_rel src_abs dst_rel
 
-      # Write mapping to .geetinclude
-      # Format: local => remote (or just path if they're the same)
-      local mapping_line
-      if [[ "$src_rel" == "$dst_rel" ]]; then
-        mapping_line="$dst_rel"
-      else
-        mapping_line="$src_rel => $dst_rel"
-      fi
+    # Optimize: for -u flag, skip writing to .geetinclude
+    # (files came from .geetinclude, so they're already there)
+    if [[ "$arg" != "-u" ]]; then
+      for path in "${check_matches[@]}"; do
+        path_rel="$(rel_path "$path")"
+        cached_resolve_paths "$path_rel" src_rel src_abs dst_rel
 
-      # Check if this mapping already exists (check both formats)
-      if ! grep -qxF "$mapping_line" "$TEMPLATE_DIR/.geetinclude" && \
-         ! grep -qxF "$dst_rel" "$TEMPLATE_DIR/.geetinclude" && \
-         ! grep -qF "$src_rel => $dst_rel" "$TEMPLATE_DIR/.geetinclude" && \
-         ! grep -qF "$dst_rel => " "$TEMPLATE_DIR/.geetinclude"; then
-        debug "adding mapping to .geetinclude: $mapping_line"
-        printf '%s\n' "$mapping_line" >> "$TEMPLATE_DIR/.geetinclude"
-      fi
-    done
+        # Write mapping to .geetinclude
+        # Format: local => remote (or just path if they're the same)
+        local mapping_line
+        if [[ "$src_rel" == "$dst_rel" ]]; then
+          mapping_line="$dst_rel"
+        else
+          mapping_line="$src_rel => $dst_rel"
+        fi
+
+        # Check if this mapping already exists (check both formats)
+        if ! grep -qxF "$mapping_line" "$TEMPLATE_DIR/.geetinclude" && \
+           ! grep -qxF "$dst_rel" "$TEMPLATE_DIR/.geetinclude" && \
+           ! grep -qF "$src_rel => $dst_rel" "$TEMPLATE_DIR/.geetinclude" && \
+           ! grep -qF "$dst_rel => " "$TEMPLATE_DIR/.geetinclude"; then
+          debug "adding mapping to .geetinclude: $mapping_line"
+          printf '%s\n' "$mapping_line" >> "$TEMPLATE_DIR/.geetinclude"
+        fi
+      done
+    fi
     sync_exclude
 
 
     geet_git add -- "$TEMPLATE_DIR/.geetinclude" "$TEMPLATE_DIR/.geetexclude"
-    for path in "${matches[@]}"; do
+
+    # Optimize: for -u flag, only git add modified files
+    # Reuse the modified_map from pattern checking phase
+    local -a add_matches=()
+    if [[ "$arg" == "-u" ]]; then
+      # Only add modified files
+      for path in "${matches[@]}"; do
+        local path_rel_add="$(rel_path "$path")"
+        if [[ -n "${modified_map[$path_rel_add]:-}" ]]; then
+          add_matches+=("$path")
+        fi
+      done
+      debug "include -u: adding ${#add_matches[@]} modified files (out of ${#matches[@]} total)"
+    else
+      # For non -u args, add all matches
+      add_matches=("${matches[@]}")
+    fi
+
+    for path in "${add_matches[@]}"; do
       path_rel="$(rel_path "$path")"
-      resolve_paths "$path_rel" src_rel src_abs dst_rel
+      cached_resolve_paths "$path_rel" src_rel src_abs dst_rel
 
       debug "src_rel:$src_rel"
       debug "dst_rel:$dst_rel"
