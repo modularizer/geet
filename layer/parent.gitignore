@@ -4,3 +4,4 @@
 **/dot-git/
 **/untracked-template-config.env
 *$TEMPLATE_FILE_SUFFIX.*
+*$TEMPLATE_FILE_SUFFIX_2.*

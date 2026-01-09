@@ -202,16 +202,21 @@ EOF
         stem="${path_base%.*}"
       fi
 
-      if [[ "$path_base" != *"$TEMPLATE_FILE_SUFFIX."* ]]; then
-        # if the path's filename doesnt contain our suffix, then figure out the version of the filename which does have the suffix
-        add_base="$path_base"
-
-        sample_base="${stem}${TEMPLATE_FILE_SUFFIX}.${ext}"
-
-      else
+      if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX."* ]]; then
         sample_base="$path_base"
         # path already is the sample, so find the filename to add as
         add_base="${path_base/$TEMPLATE_FILE_SUFFIX./.}"
+      else
+        if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX_2."* ]]; then
+          sample_base="$path_base"
+          # path already is the sample, so find the filename to add as
+          add_base="${path_base/$TEMPLATE_FILE_SUFFIX_2./.}"
+        else
+          # if the path's filename doesnt contain our suffix, then figure out the version of the filename which does have the suffix
+          add_base="$path_base"
+
+          sample_base="${stem}${TEMPLATE_FILE_SUFFIX}.${ext}"
+        fi
       fi
 
       sample_path_rel="$path_dir/$sample_base"
@@ -225,13 +230,6 @@ EOF
       add_path_rel="$(rel_path "$path_dir/$add_base")"
 
       debug "checking for $add_path_rel in $TEMPLATE_DIR/.geetinclude"
-      if ! grep -qxF "$add_path_rel" "$TEMPLATE_DIR/.geetinclude"; then
-
-        debug "adding $add_path_rel to $TEMPLATE_DIR/.geetinclude"
-
-        # add to our include file
-        printf '%s\n' "$add_path_rel" >> "$TEMPLATE_DIR/.geetinclude"
-      fi
       if ! grep -qxF "$add_path_rel" "$TEMPLATE_DIR/.geetinclude"; then
 
         debug "adding $add_path_rel to $TEMPLATE_DIR/.geetinclude"
@@ -264,18 +262,21 @@ EOF
             debug "stem:$stem"
           fi
 
-          if [[ "$path_base" != *"$TEMPLATE_FILE_SUFFIX."* ]]; then
-            debug "$path_base doesn't contain file suffix ($TEMPLATE_FILE_SUFFIX)"
-            # if the path's filename doesnt contain our suffix, then figure out the version of the filename which does have the suffix
-            add_base="$path_base"
-
-            sample_base="${stem}${TEMPLATE_FILE_SUFFIX}.${ext}"
-
-          else
-            debug "$path_base contains suffix ($TEMPLATE_FILE_SUFFIX)"
+          if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX."* ]]; then
             sample_base="$path_base"
             # path already is the sample, so find the filename to add as
             add_base="${path_base/$TEMPLATE_FILE_SUFFIX./.}"
+          else
+            if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX_2."* ]]; then
+              sample_base="$path_base"
+              # path already is the sample, so find the filename to add as
+              add_base="${path_base/$TEMPLATE_FILE_SUFFIX_2./.}"
+            else
+              # if the path's filename doesnt contain our suffix, then figure out the version of the filename which does have the suffix
+              add_base="$path_base"
+
+              sample_base="${stem}${TEMPLATE_FILE_SUFFIX}.${ext}"
+            fi
           fi
 
           sample_path_rel="$path_dir/$sample_base"

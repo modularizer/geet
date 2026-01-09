@@ -60,12 +60,18 @@ EOF
     stem="${path_base%.*}"
   fi
 
-  if [[ "$path_base" != *"$TEMPLATE_FILE_SUFFIX."* ]]; then
-    die "Must specify a template path"
-  else
+  if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX."* ]]; then
     sample_base="$path_base"
     # path already is the sample, so find the filename to add as
     add_base="${path_base/$TEMPLATE_FILE_SUFFIX./.}"
+  else
+    if [[ "$path_base" == *"$TEMPLATE_FILE_SUFFIX_2."* ]]; then
+      sample_base="$path_base"
+          # path already is the sample, so find the filename to add as
+      add_base="${path_base/$TEMPLATE_FILE_SUFFIX./.}"
+    else
+      die "Must specify a template path"
+    fi
   fi
   sample_path_rel="$path_dir/$sample_base"
   add_path_rel="$(rel_path "$path_dir/$add_base")"

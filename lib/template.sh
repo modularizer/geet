@@ -113,6 +113,7 @@ fi
 TEMPLATE_GH_USER=GH_USER
 debug "GH_USER=$GH_USER"
 TEMPLATE_FILE_SUFFIX=".template"
+TEMPLATE_FILE_SUFFIX_2="-template"
 
 # Normalize: remove leading dot if present
 LAYER_NAME="${RAW_NAME#.}"
@@ -188,12 +189,14 @@ sed -i "s|\\\$NEW_TEMPLATE_DESC|$NEW_TEMPLATE_DESC|g" "$NEW_LAYER_DIR/README.md"
 sed -i "s|\\\$DD_APP_NAME|$DD_APP_NAME|g" "$NEW_LAYER_DIR/README.md"
 sed -i "s|\\\$APP_NAME|$APP_NAME|g" "$NEW_LAYER_DIR/README.md"
 sed -i "s|\\\$TEMPLATE_FILE_SUFFIX|$TEMPLATE_FILE_SUFFIX|g" "$NEW_LAYER_DIR/README.md"
+sed -i "s|\\\$TEMPLATE_FILE_SUFFIX_2|$TEMPLATE_FILE_SUFFIX_2|g" "$NEW_LAYER_DIR/README.md"
 debug "wrote" "$NEW_LAYER_DIR/README.md" .g
 
 
 cp "$GEET_LIB/../layer/parent.gitignore" "$NEW_LAYER_DIR/parent.gitignore"
 sed -i "s|\\\$LAYER_NAME|$LAYER_NAME|g" "$NEW_LAYER_DIR/parent.gitignore"
 sed -i "s|\\\$TEMPLATE_FILE_SUFFIX|$TEMPLATE_FILE_SUFFIX|g" "$NEW_LAYER_DIR/parent.gitignore"
+sed -i "s|\\\$TEMPLATE_FILE_SUFFIX_2|$TEMPLATE_FILE_SUFFIX_2|g" "$NEW_LAYER_DIR/parent.gitignore"
 debug "wrote" "$NEW_LAYER_DIR/parent.gitignore"
 
 
@@ -209,6 +212,7 @@ write_geet_template_env() {
   sed -i "s|\\\$GH_USER|$GH_USER|g" "$NEW_LAYER_DIR/template-config.env"
   sed -i "s|\\\$GEET_ALIAS|$GEET_ALIAS|g" "$NEW_LAYER_DIR/template-config.env"
   sed -i "s|\\\$TEMPLATE_FILE_SUFFIX|$TEMPLATE_FILE_SUFFIX|g" "$NEW_LAYER_DIR/template-config.env"
+  sed -i "s|\\\$TEMPLATE_FILE_SUFFIX_2|$TEMPLATE_FILE_SUFFIX_2|g" "$NEW_LAYER_DIR/template-config.env"
   debug "wrote $target"
 }
 
@@ -303,6 +307,7 @@ grep -qxF ".$LAYER_NAME/dot-git" "$APP_DIR/.gitignore" || echo ".$LAYER_NAME/dot
 grep -qxF "**/dot-git/" "$APP_DIR/.gitignore" || echo "**/dot-git/" >> "$APP_DIR/.gitignore"
 grep -qxF "**/untracked-template-config.env" "$APP_DIR/.gitignore" || echo "**/untracked-template-config.env" >> "$APP_DIR/.gitignore"
 grep -qxF "*$TEMPLATE_FILE_SUFFIX.*" "$APP_DIR/.gitignore" || echo "*$TEMPLATE_FILE_SUFFIX.*" >> "$APP_DIR/.gitignore"
+grep -qxF "*$TEMPLATE_FILE_SUFFIX_2.*" "$APP_DIR/.gitignore" || echo "*$TEMPLATE_FILE_SUFFIX_2.*" >> "$APP_DIR/.gitignore"
 
 geet_git add ".$LAYER_NAME/geet.sh"
 geet_git add ".$LAYER_NAME/.geethier"
