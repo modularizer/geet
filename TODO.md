@@ -61,3 +61,7 @@ Similar to `geet install`, but run from inside the source template repo or even 
 or atleast make it super clear why it doesn't work...
 I get it, but I want to make sure everyone understands why they should just use normal `git` in a standalone install.
 
+### J. Add `geet mod` to modify a file into a `.template` version
+basically just call `sed`
+
+### H. Add instructions for Intellij "External Tools" setup
