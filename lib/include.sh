@@ -726,6 +726,33 @@ EOF
 
   debug "includeif: loaded ${#tracked_map[@]} tracked paths and ${#modified_files[@]} modified files"
 
+  # Set up path resolution cache (same as include)
+  declare -A path_cache_src_rel path_cache_src_abs path_cache_dst_rel
+  cached_resolve_paths() {
+    local path_rel="$1"
+    local -n _out_src_rel="$2"
+    local -n _out_src_abs="$3"
+    local -n _out_dst_rel="$4"
+
+    # Check cache
+    if [[ -n "${path_cache_src_rel[$path_rel]:-}" ]]; then
+      _out_src_rel="${path_cache_src_rel[$path_rel]}"
+      _out_src_abs="${path_cache_src_abs[$path_rel]}"
+      _out_dst_rel="${path_cache_dst_rel[$path_rel]}"
+      return
+    fi
+
+    # Cache miss - call resolve_paths with temp vars and store results
+    local tmp_src_rel tmp_src_abs tmp_dst_rel
+    resolve_paths "$path_rel" tmp_src_rel tmp_src_abs tmp_dst_rel
+    path_cache_src_rel["$path_rel"]="$tmp_src_rel"
+    path_cache_src_abs["$path_rel"]="$tmp_src_abs"
+    path_cache_dst_rel["$path_rel"]="$tmp_dst_rel"
+    _out_src_rel="$tmp_src_rel"
+    _out_src_abs="$tmp_src_abs"
+    _out_dst_rel="$tmp_dst_rel"
+  }
+
   # Process each argument
   for arg in "${GEET_ARGS[@]}"; do
     debug "processing arg: $arg"
@@ -746,33 +773,6 @@ EOF
       debug "no tracked modified files matched: $arg (passing silently)"
       continue
     fi
-
-    # Set up path resolution cache (same as include)
-    declare -A path_cache_src_rel path_cache_src_abs path_cache_dst_rel
-    cached_resolve_paths() {
-      local path_rel="$1"
-      local -n _out_src_rel="$2"
-      local -n _out_src_abs="$3"
-      local -n _out_dst_rel="$4"
-
-      # Check cache
-      if [[ -n "${path_cache_src_rel[$path_rel]:-}" ]]; then
-        _out_src_rel="${path_cache_src_rel[$path_rel]}"
-        _out_src_abs="${path_cache_src_abs[$path_rel]}"
-        _out_dst_rel="${path_cache_dst_rel[$path_rel]}"
-        return
-      fi
-
-      # Cache miss - call resolve_paths with temp vars and store results
-      local tmp_src_rel tmp_src_abs tmp_dst_rel
-      resolve_paths "$path_rel" tmp_src_rel tmp_src_abs tmp_dst_rel
-      path_cache_src_rel["$path_rel"]="$tmp_src_rel"
-      path_cache_src_abs["$path_rel"]="$tmp_src_abs"
-      path_cache_dst_rel["$path_rel"]="$tmp_dst_rel"
-      _out_src_rel="$tmp_src_rel"
-      _out_src_abs="$tmp_src_abs"
-      _out_dst_rel="$tmp_dst_rel"
-    }
 
     # Check patterns before adding files
     file_patterns=$(merge_patterns "${PREVENT_COMMIT_FILE_PATTERNS_1:-}" "${PREVENT_COMMIT_FILE_PATTERNS_2:-}" "${PREVENT_COMMIT_FILE_PATTERNS:-}")
