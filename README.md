@@ -18,6 +18,9 @@
 ## Install
 ```bash
 npm install -g geet-geet
+# or: pipx install geet-geet
+# or: pip install geet-geet
+# or: curl -fsSL https://raw.githubusercontent.com/modularizer/geet/main/install.sh | bash
 geet
 ```
 
