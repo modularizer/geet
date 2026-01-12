@@ -136,8 +136,9 @@ get_local_from_remote() {
   local remote_path="$1"
   local -n _result="$2"
 
+  declare -A dummy_local_to_remote
   declare -A remote_to_local
-  load_mappings _ remote_to_local
+  load_mappings dummy_local_to_remote remote_to_local
 
   if [[ -n "${remote_to_local[$remote_path]:-}" ]]; then
     _result="${remote_to_local[$remote_path]}"
@@ -157,7 +158,8 @@ get_remote_from_local() {
   local -n _result="$2"
 
   declare -A local_to_remote
-  load_mappings local_to_remote _
+  declare -A dummy_remote_to_local
+  load_mappings local_to_remote dummy_remote_to_local
 
   if [[ -n "${local_to_remote[$local_path]:-}" ]]; then
     _result="${local_to_remote[$local_path]}"
