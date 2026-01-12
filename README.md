@@ -149,6 +149,8 @@ You’ll “get it” in 10 minutes (hopefully).
 
 ```bash
 npm install -g geet-geet
+# or: pipx install geet-geet
+# or: curl -fsSL https://raw.githubusercontent.com/modularizer/geet/main/install.sh | bash
 geet
 ```
 
