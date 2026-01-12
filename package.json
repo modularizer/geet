@@ -1,6 +1,14 @@
 {
   "name": "geet-geet",
   "version": "1.5.1",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/modularizer/geet.git"
+  },
+  "homepage": "https://github.com/modularizer/geet#readme",
+  "bugs": {
+    "url": "https://github.com/modularizer/geet/issues"
+  },
   "private": false,
   "bin": {
     "geet": "bin/geet.sh",
