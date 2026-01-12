@@ -3,7 +3,16 @@ set -euo pipefail
 trap 'echo "ERR at ${BASH_SOURCE[0]}:${LINENO}: $BASH_COMMAND" >&2' ERR
 
 NODE_BIN="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-GEET_LIB="$(cd -- "$NODE_BIN/../lib/node_modules/geet-geet/lib" && pwd)"
+if [[ -e "$NODE_BIN/../lib/digest-and-locate.sh" ]]; then
+  GEET_LIB="$(cd -- "$NODE_BIN/../lib" && pwd)"
+else
+  if [[ -e "$NODE_BIN/../lib/node_modules/geet-geet/lib/digest-and-locate.sh" ]]; then
+    GEET_LIB="$(cd -- "$NODE_BIN/../lib/node_modules/geet-geet/lib" && pwd)"
+  else
+    echo "could not find geet's lib/ folder"
+    exit 1
+  fi
+fi
 GEET_ARGS=("$@")
 source "$GEET_LIB/digest-and-locate.sh" "$@"
 debug "GEET_ARGS=${GEET_ARGS[@]}"
@@ -195,6 +204,12 @@ case "$cmd" in
     source "$GEET_LIB/include.sh"
     GEET_ARGS=("${GEET_ARGS[@]:1}")
     include "${GEET_ARGS[@]}"
+    ;;
+
+  includeif)
+    source "$GEET_LIB/include.sh"
+    GEET_ARGS=("${GEET_ARGS[@]:1}")
+    includeif "${GEET_ARGS[@]}"
     ;;
 
   inspect)

@@ -155,6 +155,55 @@ get_modified_files() {
   fi
 }
 
+# Load all tracked files from .geetinclude into an associative array
+load_tracked_files() {
+  local -n _tracked="$1"
+  _tracked=()
+
+  [[ -f "$TEMPLATE_DIR/.geetinclude" ]] || return 0
+
+  source "$GEET_LIB/mapping.sh"
+
+  local local_path remote_path
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if parse_mapping_line "$line" local_path remote_path; then
+      # Store both local and remote paths for flexible matching
+      _tracked["$local_path"]=1
+      _tracked["$remote_path"]=1
+    fi
+  done < "$TEMPLATE_DIR/.geetinclude"
+}
+
+# Filter matches to only files that are both tracked and modified
+filter_to_tracked_and_modified() {
+  local -n _matches="$1"
+  local -n _tracked_map="$2"
+  local -n _modified_map="$3"
+  local -n _filtered="$4"
+
+  _filtered=()
+
+  for path in "${_matches[@]}"; do
+    local src_rel src_abs dst_rel
+    cached_resolve_paths "$path" src_rel src_abs dst_rel
+
+    # Check if tracked (either src or dst path)
+    local is_tracked=0
+    [[ -n "${_tracked_map[$src_rel]:-}" ]] && is_tracked=1
+    [[ -n "${_tracked_map[$dst_rel]:-}" ]] && is_tracked=1
+
+    # Check if modified
+    local is_modified=0
+    [[ -n "${_modified_map[$src_rel]:-}" ]] && is_modified=1
+    [[ -n "${_modified_map[$dst_rel]:-}" ]] && is_modified=1
+
+    # Only include if both tracked and modified
+    if [[ $is_tracked -eq 1 && $is_modified -eq 1 ]]; then
+      _filtered+=("$path")
+    fi
+  done
+}
+
 # Find files matching an argument (glob, directory, file, or -u flag)
 find_matches() {
   local arg="$1"
@@ -598,6 +647,193 @@ EOF
         # Sync to live folders
         sync_to_live_folders "$src_rel" "$dst_rel"
       else
+        debug "adding $src_rel as $dst_rel"
+        hash=$(geet_git hash-object -w -- "$src_abs")
+        geet_git update-index --add --cacheinfo 100644 "$hash" "$dst_rel"
+        # Sync to live folders
+        sync_to_live_folders "$src_rel" "$dst_rel"
+      fi
+    done
+  done
+}
+
+###############################################################################
+# INCLUDEIF - Add tracked modified files to git (no new files)
+###############################################################################
+# Only adds files that are:
+# 1. Matched by the pattern
+# 2. Already tracked in .geetinclude
+# 3. Modified since last commit
+includeif() {
+  if [[ "$1" == "help" || "$1" == "--help" || "$1" == "-h" ]]; then
+    cat <<EOF
+    $GEET_ALIAS includeif - add tracked modified files to git
+
+    This command is similar to 'include' but only adds files that are ALREADY tracked in .geetinclude
+    and have been modified since the last commit. It will NOT add new files to .geetinclude.
+
+    This is useful when you want to update existing tracked files without accidentally adding new ones.
+
+    Rules:
+      - Only adds files that match your pattern AND are in .geetinclude AND are modified
+      - Never adds new entries to .geetinclude (unlike 'include')
+      - Passes silently if no tracked modified files match (won't fail)
+      - Respects template suffix transformation (e.g., adds index.template.tsx as index.tsx)
+
+    Examples:
+      $GEET_ALIAS includeif src/            # adds tracked modified files in src/
+      $GEET_ALIAS includeif package.json    # adds if tracked and modified
+      $GEET_ALIAS includeif "**/*.ts"       # adds tracked modified .ts files
+      $GEET_ALIAS includeif -f .env         # force add if tracked and modified
+
+    Flags:
+      -f, --force       Force add files
+      --discreet        Hide files from parent git repo
+EOF
+    return 0
+  fi
+
+  if [[ -z "$TEMPLATE_DIR" ]]; then
+    critical "We could not find your template repo anywhere in this project!"
+    warn "Are you sure you are somewhere inside a project which has a template repo?"
+    warn "The template repo is a hidden folder at the root of your working directory which contains a .geethier file inside it"
+    warn "To debug our search, run \`$GEET_ALIAS status --verbose --filter LOCATE\`"
+    warn "If you think we made a mistake, review the code at $GEET_LIB/digest-and-locate.sh detect_template_dir_from_cwd"
+    exit 1
+  fi
+
+  root=$(dirname -- "${TEMPLATE_DIR%/}")
+  need_dotgit
+  sync_exclude
+  has_flag --discreet DISCREET
+  has_flag --discrete DISCRETE
+  has_flag -f FORCE
+  if [[ -n "$DISCRETE" ]]; then
+    die "Whoops! did you mean --discreet?"
+  fi
+
+  # Load tracked files from .geetinclude into a map
+  declare -A tracked_map
+  load_tracked_files tracked_map
+
+  # Load modified files into a map
+  local -a modified_files
+  get_modified_files modified_files
+  declare -A modified_map
+  for mf in "${modified_files[@]}"; do
+    modified_map["$mf"]=1
+  done
+
+  debug "includeif: loaded ${#tracked_map[@]} tracked paths and ${#modified_files[@]} modified files"
+
+  # Process each argument
+  for arg in "${GEET_ARGS[@]}"; do
+    debug "processing arg: $arg"
+
+    # Find all matches for this pattern/file/folder
+    local -a matches=()
+    find_matches "$arg" "$root" matches
+    debug "found ${#matches[@]} matches for: $arg"
+
+    # Filter to only tracked AND modified files
+    local -a filtered_matches=()
+    filter_to_tracked_and_modified matches tracked_map modified_map filtered_matches
+
+    debug "filtered to ${#filtered_matches[@]} tracked modified files for: $arg"
+
+    # Pass silently if no matches (don't fail)
+    if [[ ${#filtered_matches[@]} -eq 0 ]]; then
+      debug "no tracked modified files matched: $arg (passing silently)"
+      continue
+    fi
+
+    # Set up path resolution cache (same as include)
+    declare -A path_cache_src_rel path_cache_src_abs path_cache_dst_rel
+    cached_resolve_paths() {
+      local path_rel="$1"
+      local -n _out_src_rel="$2"
+      local -n _out_src_abs="$3"
+      local -n _out_dst_rel="$4"
+
+      # Check cache
+      if [[ -n "${path_cache_src_rel[$path_rel]:-}" ]]; then
+        _out_src_rel="${path_cache_src_rel[$path_rel]}"
+        _out_src_abs="${path_cache_src_abs[$path_rel]}"
+        _out_dst_rel="${path_cache_dst_rel[$path_rel]}"
+        return
+      fi
+
+      # Cache miss - call resolve_paths with temp vars and store results
+      local tmp_src_rel tmp_src_abs tmp_dst_rel
+      resolve_paths "$path_rel" tmp_src_rel tmp_src_abs tmp_dst_rel
+      path_cache_src_rel["$path_rel"]="$tmp_src_rel"
+      path_cache_src_abs["$path_rel"]="$tmp_src_abs"
+      path_cache_dst_rel["$path_rel"]="$tmp_dst_rel"
+      _out_src_rel="$tmp_src_rel"
+      _out_src_abs="$tmp_src_abs"
+      _out_dst_rel="$tmp_dst_rel"
+    }
+
+    # Check patterns before adding files
+    file_patterns=$(merge_patterns "${PREVENT_COMMIT_FILE_PATTERNS_1:-}" "${PREVENT_COMMIT_FILE_PATTERNS_2:-}" "${PREVENT_COMMIT_FILE_PATTERNS:-}")
+    content_patterns=$(merge_patterns "${PREVENT_COMMIT_CONTENT_PATTERNS_1:-}" "${PREVENT_COMMIT_CONTENT_PATTERNS_2:-}" "${PREVENT_COMMIT_CONTENT_PATTERNS:-}")
+
+    if [[ -n "$file_patterns" ]] || [[ -n "$content_patterns" ]]; then
+      errors=()
+
+      for path in "${filtered_matches[@]}"; do
+        path_rel="$(rel_path "$path")"
+        [[ "$path_rel" == .git/* ]] && die "attempted to commit .git"
+
+        local src_rel src_abs dst_rel
+        cached_resolve_paths "$path_rel" src_rel src_abs dst_rel
+        check_file_patterns "$file_patterns" "$src_rel" "$path_rel" errors
+        check_content_patterns "$content_patterns" "$src_rel" "$path_rel" errors
+      done
+
+      # If errors found, fail the includeif
+      if [[ ${#errors[@]} -gt 0 ]]; then
+        echo "❌ [$GEET_ALIAS includeif] Found patterns that may indicate app-specific code:" >&2
+        echo >&2
+        for error in "${errors[@]}"; do
+          echo "  $error" >&2
+        done
+        echo >&2
+        echo "These patterns suggest implementation-specific code that shouldn't be in the template." >&2
+        echo >&2
+        echo "To fix: Remove the matched patterns or update template-config.env, semitracked-template-config.env, or untracked-template-config.env" >&2
+        exit 1
+      fi
+    fi
+
+    # Skip writing to .geetinclude (files are already tracked)
+    # This is a key difference from include()
+
+    # Add tracking files to git
+    geet_git add -- "$TEMPLATE_DIR/.geetinclude" "$TEMPLATE_DIR/.geetexclude"
+
+    # Add each filtered file to git
+    for path in "${filtered_matches[@]}"; do
+      path_rel="$(rel_path "$path")"
+      local src_rel src_abs dst_rel
+      cached_resolve_paths "$path_rel" src_rel src_abs dst_rel
+
+      if [[ "$src_rel" == "$dst_rel" ]]; then
+        # Direct add (no template suffix transformation)
+        debug "adding $dst_rel"
+        if [[ -n "$DISCREET" ]]; then
+          # Add to parent git info/exclude
+          echo "$src_rel" >> "$TEMPLATE_DIR/parent-git-info-exclude"
+        fi
+        if [[ -n "$FORCE" ]]; then
+          geet_git add -f -- "$dst_rel"
+        else
+          geet_git add -- "$dst_rel"
+        fi
+        # Sync to live folders
+        sync_to_live_folders "$src_rel" "$dst_rel"
+      else
+        # Template suffix transformation (e.g., index.template.tsx -> index.tsx)
         debug "adding $src_rel as $dst_rel"
         hash=$(geet_git hash-object -w -- "$src_abs")
         geet_git update-index --add --cacheinfo 100644 "$hash" "$dst_rel"

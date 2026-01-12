@@ -167,8 +167,6 @@ write_geet_local_env() {
 # System-specific absolute paths and user preferences
 # Auto-generated - edit manually or regenerate with 'geet doctor --fix-cache'
 
-GEET_LIB=$GEET_LIB
-GEET_CMD=$GEET_CMD
 TEMPLATE_DIR=$TEMPLATE_DIR
 APP_DIR=$APP_DIR
 

@@ -1,0 +1,5 @@
+include README.md
+recursive-include bin *
+recursive-include lib *
+recursive-include layer *
+recursive-include docs *

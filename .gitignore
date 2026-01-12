@@ -9,3 +9,5 @@ config.env
 **/untracked-template-config.env
 *.template.*
 !.sport/
+*.egg-info
+node_modules/
