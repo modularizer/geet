@@ -158,6 +158,12 @@ case "$cmd" in
     install "${GEET_ARGS[@]}"
     ;;
 
+  refresh|checkout)
+      source "$GEET_LIB/refresh.sh"
+      GEET_ARGS=("${GEET_ARGS[@]:1}")
+      refresh "${GEET_ARGS[@]}"
+      ;;
+
   detach)
     source "$GEET_LIB/detach.sh"
     detach "${GEET_ARGS[@]:1}"

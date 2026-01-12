@@ -159,18 +159,20 @@ geet
 ```
 
 
-| cmd             | description                                                                         | example                                                     |
-|-----------------|-------------------------------------------------------------------------------------|-------------------------------------------------------------|
-| `geet`          | Show help                                                                           | `geet`                                                      |
-| `geet template` | Promote the current project into a new template and share the template repo         | `geet template mytemplate "a cool reusable tool" --private` |
-| `geet install`  | Install a template and create a fresh new repo using it                             | `geet install modularizer/rnb --private`                    |
-| `geet pull`     | Pull updates from the template repo                                                 | `geet pull`                                                 |
-| `geet include`  | Wrapper around `git add` for adding files to template                               | `geet include src/`                                         |
-| `geet inspect`  | Shows the status of the file or folder in working tree, app repo, and template repo | `geet inspect src/components/Button.tsx`                    |
-| `geet tree`     | Shows `git ls-files` of the template repo in a tree structure                       | `geet tree`                                                 |
-| `geet prework`  | Mainly for developers of `geet`, shows variables                                    | `geet prework`                                              |
-| `geet doctor`   | Run some checks on the setup                                                        | `geet doctor`                                               |
-| `geet <cmd>`    | Calls any git command in the template repo                                          | `geet status`, `geet push`, `geet fetch`, etc.              |
+| cmd                    | description                                                                         | example                                                     |
+|------------------------|-------------------------------------------------------------------------------------|-------------------------------------------------------------|
+| `geet`                 | Show help                                                                           | `geet`                                                      |
+| `geet template`        | Promote the current project into a new template and share the template repo         | `geet template mytemplate "a cool reusable tool" --private` |
+| `geet install`         | Install a template and create a fresh new repo using it                             | `geet install modularizer/rnb --private`                    |
+| `geet init`            | Initialize a freshly-cloned template repo (idempotent, safe to run multiple times)  | `geet init`                                                 |
+| `geet refresh/checkout`| Ensure template repo exists, fetch from origin, and checkout a ref                  | `geet refresh`, `geet checkout main`                        |
+| `geet pull`            | Pull updates from the template repo                                                 | `geet pull`                                                 |
+| `geet include`         | Wrapper around `git add` for adding files to template                               | `geet include src/`                                         |
+| `geet inspect`         | Shows the status of the file or folder in working tree, app repo, and template repo | `geet inspect src/components/Button.tsx`                    |
+| `geet tree`            | Shows `git ls-files` of the template repo in a tree structure                       | `geet tree`                                                 |
+| `geet prework`         | Mainly for developers of `geet`, shows variables                                    | `geet prework`                                              |
+| `geet doctor`          | Run some checks on the setup                                                        | `geet doctor`                                               |
+| `geet <cmd>`           | Calls any git command in the template repo                                          | `geet status`, `geet push`, `geet fetch`, etc.              |
 
 
 
@@ -198,8 +200,9 @@ geet help
 #
 #TEMPLATE MANAGEMENT:
 #  geet template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
-#  geet init                                                   Initialize a freshly-cloned template repo as your app
+#  geet init                                                   Initialize a freshly-cloned template repo as your app (idempotent)
 #  geet install <repo> <dir> [--public|--private|--internal]  Clone a template repo and initialize it
+#  geet refresh|checkout [<ref>]                              Ensure template repo exists, fetch, and checkout ref (branch/tag/commit)
 #
 #FILE MANAGEMENT:
 #  geet tree [list|tracked|all]                                Show what files the template includes

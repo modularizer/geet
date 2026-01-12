@@ -1,12 +1,5 @@
 # Possible future features
 
-### A. Better `geet init` or `geet setup` step for apps that already track a template repo
-This feature would allow for quick setup/clone of a app/template combo.
-
-1. first, the user clones the app repo which already tracked the template repo's $TEMPLATE_DIR
-2. we already know the template repo's git ref, so we can clone it directly into the app repo's working directory, using the .geetinclude mappping file to help resolve conflicts
-3. make sure to also sync "$TEMPLATE_DIR/parent-git-info-exclude" line by line to the app repo's .git/info/exclude so the app doesn't track template files it is supposed to ignore
-
 
 ### B. Major feature: "Follower mode"
 Use hooks (pre-commit, post-checkout, etc.) or a differnet cli in the APP repo to make the template repo intelligently "follow" the app repo

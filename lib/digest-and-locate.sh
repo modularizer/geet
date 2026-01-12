@@ -343,6 +343,7 @@ find_git_root() {
 if [[ -n "$TEMPLATE_DIR" ]]; then
   # Load template .env files in precedence order (lowest to highest)
   load_env_file "$TEMPLATE_DIR/template-config.env"
+  load_env_file "$TEMPLATE_DIR/git-ref.env"
   load_env_file "$TEMPLATE_DIR/semitracked-template-config.env"
   load_env_file "$TEMPLATE_DIR/untracked-template-config.env"  # Highest precedence
 

@@ -31,7 +31,10 @@ geet init
     * normal app repo
     * live template layer wired up
 
-Re-running `init` is safe — it detects prior setup and exits cleanly.
+**Idempotency**: Re-running `init` is safe — it detects prior setup and:
+- If the template layer already exists (`dot-git/` present), it runs `refresh` instead
+- If the template directory exists but needs setup, it runs `refresh` to ensure everything is up to date
+- This makes `init` safe to run multiple times without fear of breaking your setup
 
 ## Day-to-day development
 
@@ -44,6 +47,49 @@ git push
 ```
 
 You work exactly as you always have.
+
+## Refreshing and checking out template refs
+
+### Using `refresh` or `checkout`
+
+The `refresh` (alias: `checkout`) command ensures your template repo is properly set up and switches to a specific ref:
+
+```bash
+# Refresh to current tracked ref (uses TEMPLATE_GIT_* environment variables)
+geet refresh
+
+# Switch to a specific branch
+geet checkout main
+geet checkout feature-branch
+
+# Switch to a tag
+geet checkout v1.2.3
+
+# Switch to a specific commit
+geet checkout abc123
+
+# Switch to a remote branch
+geet checkout origin/develop
+```
+
+**What `refresh`/`checkout` does:**
+
+1. **Ensures template repo exists** — if `dot-git/` doesn't exist, clones the template repo
+2. **Ensures origin remote exists** — adds SSH or HTTPS remote if missing
+3. **Fetches from origin** — pulls latest refs from the remote
+4. **Safety checks** — refuses to switch refs if template has uncommitted changes (like `git checkout`)
+5. **Pre-switch cleanup** — removes template-only tracked files that won't exist in new ref
+6. **Updates HEAD/refs** — switches to the target ref (branch-like or detached)
+7. **Exports snapshot** — extracts files from the new ref
+8. **Applies mappings** — copies files according to `.geetinclude` mappings
+9. **Syncs ignore blocks** — updates managed sections in `.gitignore` and `.git/info/exclude`
+
+**Use cases:**
+
+- First-time setup after cloning an app repo that tracks a template
+- Switching template branches or tags
+- Ensuring template repo is up to date
+- Recovering from a corrupted template setup
 
 ## Pulling template updates
 

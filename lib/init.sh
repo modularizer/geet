@@ -90,11 +90,19 @@ if [[ -d "$DOTGIT" && -f "$DOTGIT/HEAD" ]]; then
   log "app gitdir:   $APP_GIT"
 
   # Update git ref tracking even when already initialized
-  source "$GEET_LIB/git-ref.sh"
-  update_git_ref
+  source "$GEET_LIB/refresh.sh"
+  refresh
 
   return 0
 fi
+
+
+if [[ -d "$TEMPLATE_DIR" ]]; then
+  log "$TEMPLATE_DIR already exists, this looks like we just need to refresh the template repo"
+  source "$GEET_LIB/refresh.sh"
+  refresh
+  return 0
+fi;
 
 ###############################################################################
 # MAIN CONVERSION LOGIC

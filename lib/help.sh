@@ -13,8 +13,9 @@ $GEET_ALIAS — Git-based template layering system (see https://github.com/modul
 
 TEMPLATE MANAGEMENT:
   $GEET_ALIAS template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
-  $GEET_ALIAS init                                                   Initialize a freshly-cloned template repo as your app
+  $GEET_ALIAS init                                                   Initialize a freshly-cloned template repo as your app (idempotent)
   $GEET_ALIAS install <repo> <dir> [--public|--private|--internal]  Clone a template repo and initialize it
+  $GEET_ALIAS refresh|checkout [<ref>]                              Ensure template repo exists, fetch, and checkout ref (branch/tag/commit)
 
 FILE MANAGEMENT:
   $GEET_ALIAS tree [list|tracked|all]                                Show what files the template includes
@@ -77,6 +78,7 @@ $GEET_ALIAS — Git-based template layering system (see https://github.com/modul
 USAGE:
   $GEET_ALIAS template <name> [desc] [--public|--private|--internal] Create a new template layer from current app
   $GEET_ALIAS install  <repo> <dir>  [--public|--private|--internal] Do a git clone of a repo and convert it into a repo of your own
+  $GEET_ALIAS refresh|checkout [<ref>]                               Ensure template repo exists, fetch, and checkout ref
   $GEET_ALIAS tree [list|tracked|all]                                Show what files the template includes
   $GEET_ALIAS split <dest> [mode]                                    Export template files to external folder
   $GEET_ALIAS inspect <path>                                         Show which layer tracks a file and its git status
