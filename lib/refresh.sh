@@ -98,20 +98,10 @@ refresh() {
   if [[ -n "$ARG_REF" ]]; then
     REF="$ARG_REF"
   else
-    if [[ "${TEMPLATE_GIT_DETACHED:-false}" == "true" ]]; then
-      [[ -n "${TEMPLATE_GIT_COMMIT:-}" ]] || die "TEMPLATE_GIT_DETACHED=true but TEMPLATE_GIT_COMMIT is empty"
-      REF="$TEMPLATE_GIT_COMMIT"
-    elif [[ -n "${TEMPLATE_GIT_BRANCH:-}" ]]; then
-      REF="$TEMPLATE_GIT_BRANCH"
-      if [[ -n "${TEMPLATE_GIT_COMMIT:-}" ]]; then
-        if geet_git merge-base --is-ancestor "$TEMPLATE_GIT_COMMIT" "origin/$TEMPLATE_GIT_BRANCH" >/dev/null 2>&1; then
-          REF="$TEMPLATE_GIT_COMMIT"
-        fi
-      fi
-    elif [[ -n "${TEMPLATE_GIT_COMMIT:-}" ]]; then
-      REF="$TEMPLATE_GIT_COMMIT"
+    if [[ -n "${TEMPLATE_GIT_REF:-}" ]]; then
+      REF="$TEMPLATE_GIT_REF"
     else
-      die "no ref arg and no TEMPLATE_GIT_BRANCH or TEMPLATE_GIT_COMMIT provided"
+      die "no ref arg and no TEMPLATE_GIT_REF provided"
     fi
   fi
 
