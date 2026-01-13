@@ -85,7 +85,16 @@ refresh() {
   ensure_template_repo
 
   has_flag -b NEW_BRANCH
+  has_flag -B FORCE_BRANCH
+
   if [[ -n "$NEW_BRANCH" ]]; then
+    geet_git checkout "$@"
+    update_git_ref
+    return 0
+  fi
+
+  if [[ -n "$FORCE_BRANCH" ]]; then
+    # -B flag: create or reset branch (like git checkout -B)
     geet_git checkout "$@"
     update_git_ref
     return 0

@@ -759,7 +759,28 @@ EOF
 
     # Find all matches for this pattern/file/folder
     local -a matches=()
-    find_matches "$arg" "$root" matches
+
+    # includeif passes silently if no files match (unlike include which fails)
+    # Check if file/dir exists before calling find_matches (which calls die)
+    if [[ "$arg" != "-u" && "$arg" != *[\*\?\[]* ]]; then
+      # Literal file or directory
+      if [[ ! -e "$arg" ]]; then
+        debug "file does not exist: $arg (passing silently)"
+        continue
+      fi
+    fi
+
+    # Try to find matches
+    set +e
+    find_matches "$arg" "$root" matches 2>/dev/null
+    local find_rc=$?
+    set -e
+
+    if [[ $find_rc -ne 0 ]] || [[ ${#matches[@]} -eq 0 ]]; then
+      debug "no files matched: $arg (passing silently)"
+      continue
+    fi
+
     debug "found ${#matches[@]} matches for: $arg"
 
     # Filter to only tracked AND modified files

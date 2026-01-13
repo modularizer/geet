@@ -158,6 +158,24 @@ case "$cmd" in
     install "${GEET_ARGS[@]}"
     ;;
 
+  follow)
+    source "$GEET_LIB/setup-follower.sh"
+    GEET_ARGS=("${GEET_ARGS[@]:1}")
+    follow "${GEET_ARGS[@]}"
+    ;;
+
+  unfollow)
+    source "$GEET_LIB/setup-follower.sh"
+    GEET_ARGS=("${GEET_ARGS[@]:1}")
+    unfollow "${GEET_ARGS[@]}"
+    ;;
+
+  following)
+    source "$GEET_LIB/setup-follower.sh"
+    GEET_ARGS=("${GEET_ARGS[@]:1}")
+    following "${GEET_ARGS[@]}"
+    ;;
+
   refresh|checkout)
       source "$GEET_LIB/refresh.sh"
       GEET_ARGS=("${GEET_ARGS[@]:1}")

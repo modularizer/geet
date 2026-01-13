@@ -1,6 +1,6 @@
 {
   "name": "geet-geet",
-  "version": "1.5.1",
+  "version": "1.6.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/modularizer/geet.git"
@@ -20,5 +20,8 @@
     "layer/",
     "README.md",
     "docs/"
-  ]
+  ],
+  "optionalDependencies": {
+    "fishook": "^1.0.0"
+  }
 }
